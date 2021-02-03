@@ -90,13 +90,3 @@ class generate_rectangle_network():
             next_loc = cur_loc
 
         return next_loc
-
-
-if __name__ == '__main__':
-
-    rectangle_network = generate_rectangle_network(3, 3)
-    rectangle_network.generate_random_experienced_travel_time(30, 300)
-
-    import pickle
-    with open('experienced_travel_time.pickle', 'wb') as file:
-        pickle.dump(rectangle_network.experienced_travel_time, file)

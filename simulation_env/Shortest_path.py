@@ -6,12 +6,19 @@ Created on Tue Feb  2 15:32:42 2021
 @author: zhexianli
 """
 
-import pickle
-import numpy as np
+import sys
+import os
 import heapq
-import datetime
 
-class PriorityQueue: #栈存储
+project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.append(project_path)
+
+
+class PriorityQueue:
+    '''
+    queue for saving
+    '''
+
     def __init__(self):
         self.elements = []
     
@@ -24,18 +31,24 @@ class PriorityQueue: #栈存储
     def get(self):
         return heapq.heappop(self.elements)[1]
 
-def dijkstra_search(cost, start, goal):
+
+def dijkstra_search(cost, start, start_time, end_time):
     frontier = PriorityQueue()
     frontier.put(start, 0)
     came_from = {}
     cost_so_far = {}
     came_from[start] = None
     cost_so_far[start] = 0
+    node_list = []
     
     while not frontier.empty():
         current = frontier.get()
         
-        if current == goal:
+        if cost_so_far[current] > start_time:
+            if current not in node_list:
+                node_list.append(current)
+        
+        if cost_so_far[current] > end_time:
             break
         
         neighbor = []
@@ -51,7 +64,8 @@ def dijkstra_search(cost, start, goal):
                 frontier.put(next, priority)
                 came_from[next] = current
     
-    return came_from, cost_so_far
+    return came_from, node_list
+
 
 def reconstruct_path(came_from, start, goal):
     current = goal
@@ -59,19 +73,6 @@ def reconstruct_path(came_from, start, goal):
     while current != start:
         path.append(current)
         current = came_from[current]
-    path.append(start) # optional
-    path.reverse() # optional
+    path.append(start)  # optional
+    path.reverse()  # optional
     return path
-
-if __name__ == "__main__":
-    
-    with open('experienced_travel_time.pickle', 'rb') as file:
-        a = pickle.load(file)
-    
-    a[a == 0] = float('inf')
-    
-    time_stamp1 = datetime.datetime.now()
-    came_from, cost_so_far = dijkstra_search(a, 0, 5)
-    path = reconstruct_path(came_from, 0, 5)
-    time_stamp2 = datetime.datetime.now()
-    print(time_stamp2 - time_stamp1)
