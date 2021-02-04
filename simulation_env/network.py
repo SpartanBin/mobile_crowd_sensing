@@ -52,6 +52,7 @@ class generate_rectangle_network():
         )
         self.experienced_travel_time += self.experienced_travel_time.T - np.diag(
             self.experienced_travel_time.diagonal())
+        self.experienced_travel_time[self.experienced_travel_time == 0] = float('inf')
 
     def generate_grid(self, grid_height, grid_width):
         self.grid = np.zeros((int(self.height / grid_height + 1), int(self.width / grid_width + 1)))

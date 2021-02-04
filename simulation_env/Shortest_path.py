@@ -32,7 +32,7 @@ class PriorityQueue:
         return heapq.heappop(self.elements)[1]
 
 
-def dijkstra_search(cost, start, start_time, end_time):
+def dijkstra_search(cost, start, start_time, node_length):
     frontier = PriorityQueue()
     frontier.put(start, 0)
     came_from = {}
@@ -48,7 +48,7 @@ def dijkstra_search(cost, start, start_time, end_time):
             if current not in node_list:
                 node_list.append(current)
         
-        if cost_so_far[current] > end_time:
+        if len(node_list) >= node_length:
             break
         
         neighbor = []
@@ -63,16 +63,27 @@ def dijkstra_search(cost, start, start_time, end_time):
                 priority = new_cost
                 frontier.put(next, priority)
                 came_from[next] = current
-    
-    return came_from, node_list
+
+    return came_from, node_list  # , cost_so_far
 
 
-def reconstruct_path(came_from, start, goal):
+def reconstruct_path(came_from, start, goal):  # , start_time, cost_so_far
+
     current = goal
+
     path = []
     while current != start:
         path.append(current)
         current = came_from[current]
     path.append(start)  # optional
     path.reverse()  # optional
-    return path
+
+    # node_cost = []
+    # add = True
+    # for i, node in enumerate(path):
+    #     node_cost.append(cost_so_far[node])
+    #     if cost_so_far[node] >= start_time and add == True:
+    #         add = i
+    # node_cost.append(add)
+
+    return path  # , node_cost
