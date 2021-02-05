@@ -1,8 +1,10 @@
+'''
+reinforcement learning simulation environment
+'''
+
 import sys
 import os
 import math
-
-import pandas as pd
 
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
@@ -12,12 +14,31 @@ from simulation_env.Shortest_path import *
 
 
 class generate_rectangle_network_action_destination_env(generate_rectangle_network):
+    '''
+    Use a node destination as an action, with grid link_weight(rewards) and rectangle shape network.
+    While agents decide the direction of further actions, the selection of destination node is made
+    by the environment considering angle between the vertices at action's direction and final node's
+    direction. And the path to final node's direction is the shortest path.
+    '''
 
     def __init__(
-            self, height, width, low_second, high_second, grid_height, grid_width, action_interval,
-            vehicle_num
+            self, height: int, width: int, low_second: Union[int, float], high_second: Union[int, float],
+            grid_height: int, grid_width: int, action_interval: Union[int, float], vehicle_num: int
     ):
-        super(generate_rectangle_network_action_destination_env).__init__(height, width)
+        '''
+        generate link matrix saving link relation between every network node, because of rectangle shape,
+        per node link only around four nodes
+        :param height: the number of row
+        :param width: the number of column
+        :param low_second: seconds, the lower bound of random experienced travel time
+        :param high_second: seconds, the upper bound of random experienced travel time
+        :param grid_height: per grid height
+        :param grid_width: per grid width
+        :param action_interval: seconds, every timestep's time interval
+        :param vehicle_num: the number of agent(vehicle) in this simulation environment
+        :return:
+        '''
+        super(generate_rectangle_network_action_destination_env, self).__init__(height, width)
         self.generate_random_experienced_travel_time(
             low_second=low_second,
             high_second=high_second,
@@ -30,31 +51,31 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.vehicle_action_paths = []
         for i in range(self.vehicle_num):
             self.vehicle_states.append([
-                np.nan, np.nan,  # location1
-                np.nan, np.nan,  # location2
+                -1, -1,  # location1
+                -1, -1,  # location2
                 0,  # remaining_time
             ])
             self.vehicle_action_paths.append(False)
         self.vehicle_states = np.array(self.vehicle_states)
-        self.vehicle_action_paths = np.array(self.vehicle_action_paths)
-        # self.vehicle_action_costs = copy.deepcopy(self.vehicle_action_paths)
 
     def reset(self):
-        self.vehicle_states[:, 0] = np.nan  # location1 row
-        self.vehicle_states[:, 1] = np.nan  # location1 col
+        '''
+        reset the agents(vehicles) position and grid link_weight(rewards)
+        '''
+        self.vehicle_states[:, 0] = -1  # location1 row
+        self.vehicle_states[:, 1] = -1  # location1 col
         coordinate_row = np.random.randint(low=0, high=self.height, size=self.vehicle_num)
         coordinate_col = np.random.randint(low=0, high=self.width, size=self.vehicle_num)
         self.vehicle_states[:, 2] = coordinate_row  # location2 row
         self.vehicle_states[:, 3] = coordinate_col  # location2 col
         self.vehicle_states[:, 4] = 0  # remaining_time
-        self.vehicle_action_paths[:] = False
-        # self.vehicle_action_costs[:] = False
+        self.vehicle_action_paths = [False] * self.vehicle_num
         self.generate_grid(
             grid_height=self.grid_height,
             grid_width=self.grid_width,
         )
 
-    def cal_angle(self, point_1, point_2, point_3):
+    def cal_angle(self, point_1: Union[tuple, list], point_2: Union[tuple, list], point_3: Union[tuple, list]):
         """
         calculating the Angle between the vertices at point_2
         :param point_1:
@@ -75,46 +96,46 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return B
 
-    def determine_path(self, vehicle_state, action):
+    def determine_path(self, vehicle_state: Union[tuple, list, np.ndarray], action: int):
         '''
-
-        :param vehicle_state:
+        deciding the final node destination when agent makes an allowed action else return False to reselect action
+        :param vehicle_state: agent's state
         :param action: 0-up, 1-left, 2-right, 3-down
-        :return:
+        :return: False or list
         '''
 
-        ac_allowed = set((0, 1, 2, 3))
+        ac_allowed = {0, 1, 2, 3}
         vehicle_loc = vehicle_state[2: 4]
         remaining_time = vehicle_state[4]
         if vehicle_loc[0] == 0:
-            ac_allowed -= set((0))
+            ac_allowed -= {0}
         elif vehicle_loc[0] == self.height - 1:
-            ac_allowed -= set((3))
+            ac_allowed -= {3}
         if vehicle_loc[1] == 0:
-            ac_allowed -= set((1))
+            ac_allowed -= {1}
         elif vehicle_loc[1] == self.width - 1:
-            ac_allowed -= set((2))
+            ac_allowed -= {2}
         if action not in ac_allowed:
-            return False, False  # reselect the action
+            return False  # reselect the action
 
         arrive_path = []
-        # arrive_cost = []
-        came_from, node_list, cost_so_far = dijkstra_search(
+        start = int(vehicle_loc[0] * self.width + vehicle_loc[1])
+        start_time = self.action_interval - remaining_time
+        if start_time < 0:
+            start_time = 0
+        came_from, node_list = dijkstra_search(
             cost=self.experienced_travel_time,
-            start=vehicle_loc[0] * self.width + vehicle_loc[1],
-            start_time=self.action_interval - remaining_time,
+            start=start,
+            start_time=start_time,
             node_length=len(ac_allowed),
         )
         for node in node_list:
             path = reconstruct_path(
                 came_from=came_from,
-                start=0,
+                start=start,
                 goal=node,
-                # start_time=self.action_interval - remaining_time,
-                # cost_so_far=cost_so_far,
             )
             arrive_path.append(path)
-            # arrive_cost.append(node_cost)
 
         # calculate the Angle between the action vector and the destination vector,
         # and choose destination with the smallest Angle as final action destination
@@ -133,40 +154,47 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             angle_list.append(self.cal_angle(action_direction, vehicle_loc, (destination_row, destination_col)))
         index = angle_list.index(min(angle_list))
 
-        return arrive_path[index]  # , arrive_cost[index]
+        return arrive_path[index]
 
     def step(self, ac_dict: dict):
         '''
-
-        :param ac_dict: dict, key value allowed 0, 1, 2, 3
+        Env receives all agents' action and make one timestep forward
+        :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
         :return:
         '''
 
         # iterate the item in self.vehicle_action_paths where key value equal to False
-        for i in np.where(self.vehicle_action_paths == False)[0]:
+        for i in np.where(np.array(self.vehicle_action_paths, dtype=np.object) == False)[0]:
             path = self.determine_path(
                 vehicle_state=self.vehicle_states[i],
                 action=ac_dict[i]
             )
             self.vehicle_action_paths[i] = path
-            # self.vehicle_action_costs[i] = cost
-        reselect_agent = np.where(self.vehicle_action_paths == False)[0]
+        reselect_agent = np.where(np.array(self.vehicle_action_paths, dtype=np.object) == False)[0]
         if len(reselect_agent) > 0:
             return reselect_agent
 
         # start execute the action
         # need calculate return reward
+        reward = 0
         for i, path in enumerate(self.vehicle_action_paths):
             path_index = 1
             remaining_time = self.action_interval
             remaining_time -= self.vehicle_states[i, 4]
             starting_node = self.vehicle_states[i, 0: 2]
-            starting_code = starting_node[0] * self.width + starting_node[1]
+            starting_code = int(starting_node[0] * self.width + starting_node[1])
             ending_node = self.vehicle_states[i, 2: 4]
-            ending_code = ending_node[0] * self.width + ending_node[1]
+            ending_code = int(ending_node[0] * self.width + ending_node[1])
             while remaining_time > 0:
+                ending_row = ending_code // self.width
+                ending_col = int(ending_code - ending_row * self.width)
+                ending_node = (ending_row, ending_col)
+                grid_row = int(ending_node[0] / self.grid_height)
+                grid_col = int(ending_node[1] / self.grid_width)
+                reward += self.grid_weight[grid_row, grid_col]
+                self.grid_weight[grid_row, grid_col] = 0
                 starting_code = ending_code
-                ending_code = path[path_index]
+                ending_code = int(path[path_index])
                 remaining_time -= self.experienced_travel_time[starting_code, ending_code]
                 path_index += 1
             starting_row = starting_code // self.width
@@ -178,10 +206,42 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             self.vehicle_states[i, 4] = -remaining_time
             self.vehicle_states[i, 2: 4] = ending_node
             if remaining_time == 0:
-                self.vehicle_states[i, 0: 2] = np.nan
+                grid_row = int(ending_node[0] / self.grid_height)
+                grid_col = int(ending_node[1] / self.grid_width)
+                reward += self.grid_weight[grid_row, grid_col]
+                self.grid_weight[grid_row, grid_col] = 0
+                self.vehicle_states[i, 0: 2] = -1
             else:
                 self.vehicle_states[i, 0: 2] = starting_node
+        self.reward = reward
+        self.vehicle_action_paths = [False] * self.vehicle_num
 
 
+if __name__ == '__main__':
 
-        self.vehicle_action_paths[:] = False
+    import time
+
+    vehicle_num = 2
+    env = generate_rectangle_network_action_destination_env(
+        height=20,
+        width=20,
+        low_second=30,
+        high_second=300,
+        grid_height=2,
+        grid_width=2,
+        action_interval=180,
+        vehicle_num=vehicle_num,
+    )
+    env.reset()
+    st = time.time()
+    for _ in range(100):
+        actions = {}
+        for i in range(vehicle_num):
+            actions[i] = np.random.randint(low=0, high=3)
+
+        reselect_agent = env.step(ac_dict=actions)
+        # if reselect_agent is None:
+        #     print(env.reward)
+        #     print(env.vehicle_states)
+    et = time.time()
+    print(et - st)

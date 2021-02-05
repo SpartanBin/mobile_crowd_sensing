@@ -64,10 +64,10 @@ def dijkstra_search(cost, start, start_time, node_length):
                 frontier.put(next, priority)
                 came_from[next] = current
 
-    return came_from, node_list  # , cost_so_far
+    return came_from, node_list
 
 
-def reconstruct_path(came_from, start, goal):  # , start_time, cost_so_far
+def reconstruct_path(came_from, start, goal):
 
     current = goal
 
@@ -78,12 +78,4 @@ def reconstruct_path(came_from, start, goal):  # , start_time, cost_so_far
     path.append(start)  # optional
     path.reverse()  # optional
 
-    # node_cost = []
-    # add = True
-    # for i, node in enumerate(path):
-    #     node_cost.append(cost_so_far[node])
-    #     if cost_so_far[node] >= start_time and add == True:
-    #         add = i
-    # node_cost.append(add)
-
-    return path  # , node_cost
+    return path

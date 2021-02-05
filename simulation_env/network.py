@@ -1,14 +1,28 @@
+'''
+Base simulation road network, without method to receiving action and returning
+next state and immediate reward, cannot be used for reinforcement learning
+environment directly
+'''
+
 import copy
+from typing import Union
 
 import numpy as np
 
 
 class generate_rectangle_network():
     '''
-
+    road network with the same number of row node and column node in order
     '''
 
-    def __init__(self, height, width):
+    def __init__(self, height: int, width: int):
+        '''
+        generate link matrix saving link relation between every network node, because of rectangle shape,
+        per node link only around four nodes
+        :param height: the number of row
+        :param width: the number of column
+        :return:
+        '''
         self.height = height
         self.width = width
         self.node = np.zeros((self.height, self.width))
@@ -33,18 +47,28 @@ class generate_rectangle_network():
                 try:
                     _ = self.link_matrix[link_matrix_row, link_matrix_row - width]
                     up = link_matrix_row - width
+                    if row == 0:
+                        up = None
                 except:
                     up = None
                 try:
                     _ = self.link_matrix[link_matrix_row, link_matrix_row + width]
                     down = link_matrix_row + width
+                    if row == height - 1:
+                        down = None
                 except:
                     down = None
                 for link_matrix_col in (left, right, up, down):
                     if link_matrix_col is not None:
                         self.link_matrix[link_matrix_row, link_matrix_col] = 1
 
-    def generate_random_experienced_travel_time(self, low_second, high_second):
+    def generate_random_experienced_travel_time(self, low_second: Union[int, float], high_second: Union[int, float]):
+        '''
+        generate random experienced travel time between the range low_second to high_second on link nodes
+        :param low_second: seconds, the lower bound of random experienced travel time
+        :param high_second: seconds, the upper bound of random experienced travel time
+        :return:
+        '''
         self.experienced_travel_time = copy.deepcopy(np.triu(self.link_matrix))
         link_node = np.where(self.experienced_travel_time != 0)
         self.experienced_travel_time[link_node] = np.random.uniform(
@@ -54,40 +78,24 @@ class generate_rectangle_network():
             self.experienced_travel_time.diagonal())
         self.experienced_travel_time[self.experienced_travel_time == 0] = float('inf')
 
-    def generate_grid(self, grid_height, grid_width):
-        self.grid = np.zeros((int(self.height / grid_height + 1), int(self.width / grid_width + 1)))
+    def generate_grid(self, grid_height: int, grid_width: int):
+        '''
+        generate grid with random link_weight(rewards). Nodes in same grid share the same link_weight
+        :param grid_height: per grid height
+        :param grid_width: per grid width
+        :return:
+        '''
+        self.grid = np.ones((int(self.height / grid_height + 0.999999999999), int(
+            self.width / grid_width + 0.999999999999)))
         self.grid_weight = copy.deepcopy(self.grid)
-        index = np.where(self.grid_weight == 0)
+        index = np.where(self.grid_weight == 1)
         self.grid_weight[index] = np.random.dirichlet(self.grid_weight[index], size=1)
 
     def generate_random_link_weight(self):
+        '''
+        generate random link_weight(rewards) for every roads
+        '''
         self.link_weight = copy.deepcopy(np.triu(self.link_matrix))
         link_node = np.where(self.link_weight != 0)
         self.link_weight[link_node] = np.random.dirichlet(self.link_weight[link_node], size=1)
         self.link_weight += self.link_weight.T - np.diag(self.link_weight.diagonal())
-
-    def move(self, cur_loc, action):
-        '''
-
-        :param cur_loc:
-        :param action: 0-up, 1-left, 2-right, 3-down
-        :return:
-        '''
-
-        if action == 0:
-            next_loc = (cur_loc[0] - 1, cur_loc[1])
-        elif action == 1:
-            next_loc = (cur_loc[0], cur_loc[1] - 1)
-        elif action == 2:
-            next_loc = (cur_loc[0], cur_loc[1] + 1)
-        elif action == 3:
-            next_loc = (cur_loc[0] + 1, cur_loc[1])
-        else:
-            next_loc = None
-
-        try:
-            _ = self.node[next_loc]
-        except:
-            next_loc = cur_loc
-
-        return next_loc
