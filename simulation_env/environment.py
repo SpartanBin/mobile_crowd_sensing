@@ -23,7 +23,8 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
     def __init__(
             self, height: int, width: int, low_second: Union[int, float], high_second: Union[int, float],
-            grid_height: int, grid_width: int, action_interval: Union[int, float], vehicle_num: int
+            grid_height: int, grid_width: int, action_interval: Union[int, float],
+            episode_duration: Union[int, float, None], vehicle_num: int,
     ):
         '''
         generate link matrix saving link relation between every network node, because of rectangle shape,
@@ -35,6 +36,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         :param grid_height: per grid height
         :param grid_width: per grid width
         :param action_interval: seconds, every timestep's time interval
+        :param episode_duration: seconds, episode duration time, if None, continuing until no reward
         :param vehicle_num: the number of agent(vehicle) in this simulation environment
         :return:
         '''
@@ -46,6 +48,10 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.grid_height = grid_height
         self.grid_width = grid_width
         self.action_interval = action_interval
+        self.past_time = 0
+        self.episode_duration = episode_duration
+        if self.episode_duration is None:
+            self.episode_duration = float('inf')
         self.vehicle_num = vehicle_num
         self.vehicle_states = []
         self.vehicle_action_paths = []
@@ -62,6 +68,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         '''
         reset the agents(vehicles) position and grid link_weight(rewards)
         '''
+        self.past_time = 0
         self.vehicle_states[:, 0] = -1  # location1 row
         self.vehicle_states[:, 1] = -1  # location1 col
         coordinate_row = np.random.randint(low=0, high=self.height, size=self.vehicle_num)
@@ -74,6 +81,13 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             grid_height=self.grid_height,
             grid_width=self.grid_width,
         )
+        self.cal_node_weight(
+            grid_height=self.grid_height,
+            grid_width=self.grid_width,
+        )
+        self.left_reward = self.grid_weight.sum()
+
+        return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight))
 
     def cal_angle(self, point_1: Union[tuple, list], point_2: Union[tuple, list], point_3: Union[tuple, list]):
         """
@@ -163,6 +177,9 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         :return:
         '''
 
+        left_time = self.episode_duration - self.past_time
+        assert left_time > 0 and self.left_reward > 0, 'you need reset the environment first'
+
         # iterate the item in self.vehicle_action_paths where key value equal to False
         for i in np.where(np.array(self.vehicle_action_paths, dtype=np.object) == False)[0]:
             path = self.determine_path(
@@ -176,10 +193,15 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         # start execute the action
         # need calculate return reward
+        done = False
         reward = 0
+        action_interval = self.action_interval
+        if action_interval >= left_time:
+            action_interval = left_time
+            done = True
         for i, path in enumerate(self.vehicle_action_paths):
             path_index = 1
-            remaining_time = self.action_interval
+            remaining_time = action_interval
             remaining_time -= self.vehicle_states[i, 4]
             starting_node = self.vehicle_states[i, 0: 2]
             starting_code = int(starting_node[0] * self.width + starting_node[1])
@@ -213,15 +235,25 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 self.vehicle_states[i, 0: 2] = -1
             else:
                 self.vehicle_states[i, 0: 2] = starting_node
-        self.reward = reward
         self.vehicle_action_paths = [False] * self.vehicle_num
+
+        self.past_time += action_interval
+        self.cal_node_weight(
+            grid_height=self.grid_height,
+            grid_width=self.grid_width,
+        )
+        self.left_reward = self.grid_weight.sum()
+        if self.left_reward <= 0:
+            done = True
+
+        return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done
 
 
 if __name__ == '__main__':
 
     import time
 
-    vehicle_num = 2
+    vehicle_num = 50
     env = generate_rectangle_network_action_destination_env(
         height=20,
         width=20,
@@ -230,18 +262,22 @@ if __name__ == '__main__':
         grid_height=2,
         grid_width=2,
         action_interval=180,
+        episode_duration=3600,
         vehicle_num=vehicle_num,
     )
     env.reset()
     st = time.time()
-    for _ in range(100):
+    for _ in range(10000):
         actions = {}
         for i in range(vehicle_num):
             actions[i] = np.random.randint(low=0, high=3)
 
-        reselect_agent = env.step(ac_dict=actions)
-        # if reselect_agent is None:
-        #     print(env.reward)
-        #     print(env.vehicle_states)
+        output = env.step(ac_dict=actions)
+        print(env.left_reward)
+        if len(output) == 3:
+            vehicle_states, reward, done = output
+            print(vehicle_states)
+            print(reward)
+            print(done)
     et = time.time()
     print(et - st)

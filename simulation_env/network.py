@@ -91,6 +91,17 @@ class generate_rectangle_network():
         index = np.where(self.grid_weight == 1)
         self.grid_weight[index] = np.random.dirichlet(self.grid_weight[index], size=1)
 
+    def cal_node_weight(self, grid_height: int, grid_width: int):
+        '''
+        map the weights of grid into node
+        :param grid_height: per grid height
+        :param grid_width: per grid width
+        :return:
+        '''
+        self.node_weight = np.repeat(self.grid_weight, grid_height, axis=0)
+        self.node_weight = np.repeat(self.node_weight, grid_width, axis=1)
+        self.node_weight = self.node_weight[0: self.height, 0: self.width]
+
     def generate_random_link_weight(self):
         '''
         generate random link_weight(rewards) for every roads
