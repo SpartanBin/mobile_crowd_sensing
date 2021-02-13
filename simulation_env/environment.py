@@ -270,7 +270,7 @@ if __name__ == '__main__':
     for _ in range(10000):
         actions = {}
         for i in range(vehicle_num):
-            actions[i] = np.random.randint(low=0, high=3)
+            actions[i] = np.random.randint(low=0, high=4)
 
         output = env.step(ac_dict=actions)
         print(env.left_reward)
