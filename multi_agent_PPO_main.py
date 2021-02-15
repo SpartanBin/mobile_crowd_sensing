@@ -17,8 +17,8 @@ if __name__ == '__main__':
     grid_height = 2
     grid_width = 2
     action_interval = 180
-    episode_duration = 3600
-    vehicle_num = 10
+    episode_duration = None
+    vehicle_num = 1
 
     loc_dim = 4
     weight_shape = (height, width)
@@ -71,6 +71,7 @@ if __name__ == '__main__':
         action_interval=action_interval,
         episode_duration=episode_duration,
         vehicle_num=vehicle_num,
+        seed=seed,
     )
 
     model = multi_agent_PPO(

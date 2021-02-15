@@ -105,7 +105,7 @@ class multi_agent_PPO():
             learning_rate=self.learning_rate,
         ).to(self.device)
 
-    def make_one_step_forward_for_env(self, env, distributions):
+    def make_one_step_forward_for_env(self, env, distributions, episode_time_cost):
 
         reselect_agent = np.array(range(self.vehicle_num))
         ac_dict = {}
@@ -124,14 +124,14 @@ class multi_agent_PPO():
                 actions[i] = action
                 log_probs[i] = log_prob.cpu().numpy()[0]
 
-            env_returns = env.step(ac_dict)
+            env_returns = env.step(ac_dict, episode_time_cost)
             if type(env_returns) == np.ndarray:
                 reselect_agent = env_returns
             else:
-                new_obs, rewards, done = env_returns
+                new_obs, rewards, done, episode_time_cost = env_returns
                 reselect_agent = np.array([])
 
-        return actions, log_probs, new_obs, rewards, done
+        return actions, log_probs, new_obs, rewards, done, episode_time_cost
 
     def collect_rollouts(self):
         """
@@ -155,13 +155,16 @@ class multi_agent_PPO():
                     weight_features=weight_features,
                 )
 
-            actions, log_probs, new_obs, reward, done = self.make_one_step_forward_for_env(
+            actions, log_probs, new_obs, reward, done, self.episode_time_cost = self.make_one_step_forward_for_env(
                 env=self.env,
                 distributions=distributions,
+                episode_time_cost=self.episode_time_cost,
             )
 
             if done:
-                print(1 - self.env.left_reward)
+                print('in this episode, all reward = {}, time cost = {}'.format(
+                    1 - self.env.left_reward, self.episode_time_cost))
+                self.episode_time_cost = 0
                 new_obs = self.env.reset()
             new_obs = list(new_obs)
             new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
@@ -266,6 +269,7 @@ class multi_agent_PPO():
     def learn(self, total_timesteps: int):
 
         self.num_timesteps = 0
+        self.episode_time_cost = 0
         self._last_obs = list(self.env.reset())
         self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1))
         self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(

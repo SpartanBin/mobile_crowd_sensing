@@ -5,6 +5,7 @@ reinforcement learning simulation environment
 import sys
 import os
 import math
+import random
 
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
@@ -25,6 +26,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             self, height: int, width: int, low_second: Union[int, float], high_second: Union[int, float],
             grid_height: int, grid_width: int, action_interval: Union[int, float],
             episode_duration: Union[int, float, None], vehicle_num: int,
+            seed: int,
     ):
         '''
         generate link matrix saving link relation between every network node, because of rectangle shape,
@@ -40,6 +42,11 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         :param vehicle_num: the number of agent(vehicle) in this simulation environment
         :return:
         '''
+
+        random.seed(seed)
+        # Seed numpy RNG
+        np.random.seed(seed)
+
         super(generate_rectangle_network_action_destination_env, self).__init__(height, width)
         self.generate_random_experienced_travel_time(
             low_second=low_second,
@@ -170,7 +177,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return arrive_path[index]
 
-    def step(self, ac_dict: dict):
+    def step(self, ac_dict: dict, episode_time_cost):
         '''
         Env receives all agents' action and make one timestep forward
         :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
@@ -246,7 +253,9 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         if self.left_reward <= 0:
             done = True
 
-        return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done
+        episode_time_cost += self.action_interval
+
+        return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done, episode_time_cost
 
 
 if __name__ == '__main__':
