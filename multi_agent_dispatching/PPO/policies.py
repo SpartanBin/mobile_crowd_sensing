@@ -363,6 +363,7 @@ class multi_agent_ACP(nn.Module):
                 distribution, value, _ = self.ACP[i](input_loc_features, weight_features, None)
                 values.append(value)
                 distributions.append(distribution)
+            values = torch.cat(values, dim=1)
             return distributions, values, None
         else:
             log_probs = []
@@ -373,8 +374,11 @@ class multi_agent_ACP(nn.Module):
                 input_loc_features = torch.cat((vehicle_loc, input_loc_features), dim=1)
                 value, log_prob, entropy = self.ACP[i](input_loc_features, weight_features, actions[:, i])
                 values.append(value)
-                log_probs.append(log_prob)
-                entropys.append(entropy)
+                log_probs.append(log_prob.view(log_prob.shape + (1,)))
+                entropys.append(entropy.view(log_prob.shape + (1,)))
+            values = torch.cat(values, dim=1)
+            log_probs = torch.cat(log_probs, dim=1)
+            entropys = torch.cat(entropys, dim=1)
             return values, log_probs, entropys
 
 
