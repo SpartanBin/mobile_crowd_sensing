@@ -12,8 +12,8 @@ from torch.distributions import Categorical
 
 class MlpExtractor(nn.Module):
 
-    def __init__(self, loc_feature_dim: Union[tuple, list], weight_feature_params: Union[tuple, list],
-                 output_dim: Union[tuple, list], share_params: bool):
+    def __init__(self, loc_feature_dim: list, weight_feature_params: list,
+                 output_dim: list, share_params: bool):
         '''
         :param loc_feature_dim: type of item in iteration must be int object
         :param weight_feature_params: type of item in iteration must be dict object, and dict keys are Conv layer
@@ -148,9 +148,9 @@ class ActorCriticPolicy(nn.Module):
     def __init__(
         self,
         ortho_init: bool,
-        loc_feature_dim: Union[tuple, list],
-        weight_feature_params: Union[tuple, list],
-        output_dim: Union[tuple, list],
+        loc_feature_dim: list,
+        weight_feature_params: list,
+        output_dim: list,
         share_params: bool,
         action_dim: int,
         learning_rate: Union[int, float],
@@ -158,7 +158,7 @@ class ActorCriticPolicy(nn.Module):
         '''
         :param ortho_init:
         :param loc_feature_dim: type of item in iteration must be int object,
-        official param = (input_feature_dim, 64, 64)
+        official param = [input_feature_dim, 64, 64]
         :param weight_feature_params: type of item in iteration must be dict object, and dict keys are Conv layer
         param names, key values are allowed param values
         :param output_dim: type of item in iteration must be int object
@@ -246,22 +246,21 @@ class ActorCriticPolicy(nn.Module):
             return value, log_prob, entropy
 
 
-class multi_agent_ACP(nn.Module):
+class multi_agent_ACP():
 
     def __init__(
             self,
             vehicle_num: int,
             loc_dim: int,
-            weight_shape: tuple,
+            weight_shape: Union[tuple, list],
             share_policy: bool,
             ortho_init: bool,
-            loc_feature_dim: Union[tuple, list],
-            weight_feature_params: Union[tuple, list],
-            output_dim: Union[tuple, list],
+            loc_feature_dim: list,
+            weight_feature_params: list,
+            output_dim: list,
             share_params: bool,
             action_dim: int,
             learning_rate: Union[int, float]):
-        super(multi_agent_ACP, self).__init__()
         '''
         :param loc_feature_dim: without input dim
         :param weight_feature_params: with input layer params
@@ -274,7 +273,7 @@ class multi_agent_ACP(nn.Module):
         self.weight_shape = weight_shape
         self.share_policy = share_policy
 
-        loc_feature_dim = ((vehicle_num + 1) * loc_dim,) + loc_feature_dim
+        loc_feature_dim = [(vehicle_num + 1) * loc_dim] + loc_feature_dim
         conv_output_shape = copy.deepcopy(weight_shape)
         for params in weight_feature_params:
             if 'padding' not in params:
@@ -290,8 +289,8 @@ class multi_agent_ACP(nn.Module):
                 dilation=params['dilation'],
                 stride=params['stride'],
             )
-        output_dim = (loc_feature_dim[-1] + conv_output_shape[0] * conv_output_shape[1] * 1 *
-                      params['out_channels'],) + output_dim
+        output_dim = [loc_feature_dim[-1] + conv_output_shape[0] * conv_output_shape[1] * 1 *
+                      params['out_channels']] + output_dim
 
         self.ACP = {}
         for i in range(vehicle_num):
@@ -325,6 +324,11 @@ class multi_agent_ACP(nn.Module):
         col = int((input_shape[1] + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
         return (row, col)
 
+    def to(self, param):
+        for i in range(self.vehicle_num):
+            self.ACP[i].to(param)
+        return self
+
     def optimize(self, loss: torch.Tensor, max_grad_norm):
 
         if self.share_policy:
@@ -334,10 +338,12 @@ class multi_agent_ACP(nn.Module):
                 self.ACP[i].optimizer.zero_grad()
         loss.backward()
         if self.share_policy:
+            # Clip grad norm
             torch.nn.utils.clip_grad_norm_(self.ACP[0].parameters(), max_grad_norm)
             self.ACP[0].optimizer.step()
         else:
             for i in range(self.vehicle_num):
+                # Clip grad norm
                 torch.nn.utils.clip_grad_norm_(self.ACP[i].parameters(), max_grad_norm)
                 self.ACP[i].optimizer.step()
 
@@ -389,16 +395,16 @@ if __name__ == '__main__':
     weight_shape = (20, 20)
     share_policy = True
     ortho_init = True
-    loc_feature_dim = (64,)
-    weight_feature_params = ({
+    loc_feature_dim = [64]
+    weight_feature_params = [{
         'in_channels': 1,
         'out_channels': 1,
         'kernel_size': (3, 3),
         'stride': (2, 2),
         'padding': (1, 1),
         'dilation': (1, 1),
-    }, )
-    output_dim = (32, )
+    }]
+    output_dim = [32]
     share_params = False
     action_dim = 4
     learning_rate = 0.0001

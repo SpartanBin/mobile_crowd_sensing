@@ -78,7 +78,7 @@ class RolloutBuffer():
         self.full = False
 
     def add(
-        self, obs: tuple, actions: np.ndarray, reward: np.ndarray,
+        self, obs: list, actions: np.ndarray, reward: np.ndarray,
             done: bool, value: torch.Tensor, log_prob: np.ndarray,
     ) -> None:
         """
