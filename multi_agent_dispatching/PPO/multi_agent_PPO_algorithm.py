@@ -103,7 +103,7 @@ class multi_agent_PPO():
             share_params=self.share_params,
             action_dim=self.action_dim,
             learning_rate=self.learning_rate,
-        ).to(self.device)
+        ).to(self.device).eval()
 
     def make_one_step_forward_for_env(self, env, distributions, episode_time_cost):
 
@@ -143,6 +143,7 @@ class multi_agent_PPO():
         timestep = 0
         done = False
         self.rollout_buffer.reset()
+        self.policy.eval()
 
         while timestep < self.n_steps:
 
@@ -192,6 +193,7 @@ class multi_agent_PPO():
         """
         Update policy using the currently gathered rollout buffer.
         """
+        self.policy.train()
         # Update optimizer learning rate
         for i in range(self.vehicle_num):
             for param_group in self.policy.ACP[i].optimizer.param_groups:
@@ -289,6 +291,7 @@ class multi_agent_PPO():
         :return: the model's action and the next state
             (used in recurrent policies)
         """
+        self.policy.eval()
         loc_features = torch.as_tensor(observation[0].astype(np.float32).reshape((1, -1))).to(self.device)
         weight_features = torch.as_tensor(observation[1].astype(np.float32).reshape(
             (1, 1,) + self._last_obs[1].shape)).to(self.device)

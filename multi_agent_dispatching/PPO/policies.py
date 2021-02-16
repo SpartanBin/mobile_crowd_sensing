@@ -329,6 +329,16 @@ class multi_agent_ACP():
             self.ACP[i].to(param)
         return self
 
+    def train(self):
+        for i in range(self.vehicle_num):
+            self.ACP[i].train()
+        return self
+
+    def eval(self):
+        for i in range(self.vehicle_num):
+            self.ACP[i].eval()
+        return self
+
     def optimize(self, loss: torch.Tensor, max_grad_norm):
 
         if self.share_policy:
