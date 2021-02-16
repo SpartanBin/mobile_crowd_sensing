@@ -68,7 +68,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 -1, -1,  # location2
                 0,  # remaining_time
             ])
-            self.vehicle_action_paths.append(False)
+            self.vehicle_action_paths.append(- 10000)
         self.vehicle_states = np.array(self.vehicle_states)
 
     def reset(self):
@@ -83,7 +83,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.vehicle_states[:, 2] = coordinate_row  # location2 row
         self.vehicle_states[:, 3] = coordinate_col  # location2 col
         self.vehicle_states[:, 4] = 0  # remaining_time
-        self.vehicle_action_paths = [False] * self.vehicle_num
+        self.vehicle_action_paths = [- 10000] * self.vehicle_num
         self.generate_grid(
             grid_height=self.grid_height,
             grid_width=self.grid_width,
@@ -119,10 +119,10 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
     def determine_path(self, vehicle_state: Union[tuple, list, np.ndarray], action: int):
         '''
-        deciding the final node destination when agent makes an allowed action else return False to reselect action
+        deciding the final node destination when agent makes an allowed action else return - 10000 to reselect action
         :param vehicle_state: agent's state
         :param action: 0-up, 1-left, 2-right, 3-down
-        :return: False or list
+        :return: - 10000 or list
         '''
 
         ac_allowed = {0, 1, 2, 3}
@@ -137,7 +137,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         elif vehicle_loc[1] == self.width - 1:
             ac_allowed -= {2}
         if action not in ac_allowed:
-            return False  # reselect the action
+            return - 10000  # reselect the action
 
         arrive_path = []
         start = int(vehicle_loc[0] * self.width + vehicle_loc[1])
@@ -187,14 +187,14 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         left_time = self.episode_duration - self.past_time
         assert left_time > 0 and self.left_reward > 0, 'you need reset the environment first'
 
-        # iterate the item in self.vehicle_action_paths where key value equal to False
-        for i in np.where(np.array(self.vehicle_action_paths, dtype=np.object) == False)[0]:
+        # iterate the item in self.vehicle_action_paths where key value equal to - 10000
+        for i in np.where(np.array(self.vehicle_action_paths) == - 10000)[0]:
             path = self.determine_path(
                 vehicle_state=self.vehicle_states[i],
                 action=ac_dict[i]
             )
             self.vehicle_action_paths[i] = path
-        reselect_agent = np.where(np.array(self.vehicle_action_paths, dtype=np.object) == False)[0]
+        reselect_agent = np.where(np.array(self.vehicle_action_paths) == - 10000)[0]
         if len(reselect_agent) > 0:
             return reselect_agent
 
@@ -242,7 +242,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 self.vehicle_states[i, 0: 2] = -1
             else:
                 self.vehicle_states[i, 0: 2] = starting_node
-        self.vehicle_action_paths = [False] * self.vehicle_num
+        self.vehicle_action_paths = [- 10000] * self.vehicle_num
 
         self.past_time += action_interval
         self.cal_node_weight(

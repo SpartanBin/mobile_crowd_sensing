@@ -17,7 +17,7 @@ if __name__ == '__main__':
     grid_height = 2
     grid_width = 2
     action_interval = 180
-    episode_duration = None
+    episode_duration = 24 * 3600
     vehicle_num = 1
 
     loc_dim = 4
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     max_grad_norm = 0.5
     target_kl = None
     device = 'cuda'
-    seed = 4000
+    seed = 10000
 
     env = generate_rectangle_network_action_destination_env(
         height=height,
