@@ -48,9 +48,9 @@ if __name__ == '__main__':
     action_dim = 4
     learning_rate = 3e-4
     n_steps = 2048
-    batch_size = 1024
+    batch_size = n_steps
     n_epochs = 10
-    gamma = 0.9
+    gamma = 0.99
     gae_lambda = 0.95
     clip_range = 0.2
     clip_range_vf = None
@@ -59,7 +59,7 @@ if __name__ == '__main__':
     max_grad_norm = 0.5
     target_kl = None
     device = 'cuda'
-    seed = 10000
+    seed = 400
 
     env = generate_rectangle_network_action_destination_env(
         height=height,
