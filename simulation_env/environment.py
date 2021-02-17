@@ -93,6 +93,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             grid_width=self.grid_width,
         )
         self.left_reward = self.grid_weight.sum()
+        self.every_step_deducting_reward = self.grid_weight.mean()
 
         return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight))
 
@@ -201,7 +202,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         # start execute the action
         # need calculate return reward
         done = False
-        reward = 0
+        reward = - self.every_step_deducting_reward
         action_interval = self.action_interval
         if action_interval >= left_time:
             action_interval = left_time
