@@ -115,6 +115,8 @@ class multi_agent_PPO():
 
         while len(reselect_agent) > 0:
 
+            self.select_action_time += 1
+
             for i in reselect_agent:
                 distribution = distributions[i]
                 action = distribution.get_actions()
@@ -163,10 +165,11 @@ class multi_agent_PPO():
             )
 
             if done:
-                print('in this episode, all reward = {}, time cost = {}'.format(
-                    1 - self.env.left_reward, self.episode_time_cost))
+                print('in this episode, all reward = {}, time cost = {}, reselect_action_times = {}'.format(
+                    1 - self.env.left_reward, self.episode_time_cost, self.select_action_time))
                 self.episode_time_cost = 0
                 new_obs = self.env.reset()
+                self.select_action_time = 0
             new_obs = list(new_obs)
             new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
             new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
@@ -277,6 +280,8 @@ class multi_agent_PPO():
         self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(
             (1, 1,) + self._last_obs[1].shape)
         self._last_done = False
+
+        self.select_action_time = 0
 
         while self.num_timesteps < total_timesteps:
             self.collect_rollouts()
