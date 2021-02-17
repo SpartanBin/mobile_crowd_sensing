@@ -168,7 +168,7 @@ class multi_agent_PPO():
                 self.episode_time_cost = 0
                 new_obs = self.env.reset()
             new_obs = list(new_obs)
-            new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1)) / 20
+            new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
             new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
 
             self.num_timesteps += 1
@@ -273,7 +273,7 @@ class multi_agent_PPO():
         self.num_timesteps = 0
         self.episode_time_cost = 0
         self._last_obs = list(self.env.reset())
-        self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1)) / 20
+        self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1))
         self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(
             (1, 1,) + self._last_obs[1].shape)
         self._last_done = False
