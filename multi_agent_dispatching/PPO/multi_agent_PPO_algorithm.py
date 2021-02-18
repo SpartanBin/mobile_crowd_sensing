@@ -105,33 +105,55 @@ class multi_agent_PPO():
             learning_rate=self.learning_rate,
         ).to(self.device).eval()
 
+    # def make_one_step_forward_for_env(self, env, distributions, episode_time_cost):
+    #
+    #     reselect_agent = np.array(range(self.vehicle_num))
+    #     ac_dict = {}
+    #     actions = np.array([np.nan] * self.vehicle_num)
+    #     log_probs = np.array([np.nan] * self.vehicle_num)
+    #     new_obs, rewards, done = None, None, None
+    #
+    #     while len(reselect_agent) > 0:
+    #
+    #         for i in reselect_agent:
+    #             self.select_action_time += 1
+    #             distribution = distributions[i]
+    #             action = distribution.get_actions()
+    #             log_prob = distribution.log_prob(action)
+    #             action = action.cpu().numpy()[0]
+    #             ac_dict[i] = action
+    #             actions[i] = action
+    #             log_probs[i] = log_prob.cpu().numpy()[0]
+    #
+    #         env_returns = env.step(ac_dict, episode_time_cost)
+    #         if type(env_returns) == np.ndarray:
+    #             reselect_agent = env_returns
+    #         else:
+    #             new_obs, rewards, done, episode_time_cost = env_returns
+    #             reselect_agent = np.array([])
+    #
+    #     return actions, log_probs, new_obs, rewards, done, episode_time_cost
+
     def make_one_step_forward_for_env(self, env, distributions, episode_time_cost):
 
         reselect_agent = np.array(range(self.vehicle_num))
-        ac_dict = {}
-        actions = np.array([np.nan] * self.vehicle_num)
-        log_probs = np.array([np.nan] * self.vehicle_num)
-        new_obs, rewards, done = None, None, None
+        ac_probs_dict = {}
 
-        while len(reselect_agent) > 0:
-
+        for i in reselect_agent:
             self.select_action_time += 1
+            distribution = distributions[i]
+            ac_probs_dict[i] = distribution.all_probs()[0]
 
-            for i in reselect_agent:
-                distribution = distributions[i]
-                action = distribution.get_actions()
-                log_prob = distribution.log_prob(action)
-                action = action.cpu().numpy()[0]
-                ac_dict[i] = action
-                actions[i] = action
-                log_probs[i] = log_prob.cpu().numpy()[0]
+        actions, new_obs, rewards, done, episode_time_cost = env.step_by_action_probs(
+            ac_probs_dict=ac_probs_dict,
+            episode_time_cost=episode_time_cost,
+        )
 
-            env_returns = env.step(ac_dict, episode_time_cost)
-            if type(env_returns) == np.ndarray:
-                reselect_agent = env_returns
-            else:
-                new_obs, rewards, done, episode_time_cost = env_returns
-                reselect_agent = np.array([])
+        log_probs = np.array([np.nan] * self.vehicle_num)
+        ac = torch.tensor(actions).view((1, -1)).to(self.device)
+        for i in reselect_agent:
+            distribution = distributions[i]
+            log_probs[i] = distribution.log_prob(ac[:, i]).cpu().numpy()[0]
 
         return actions, log_probs, new_obs, rewards, done, episode_time_cost
 

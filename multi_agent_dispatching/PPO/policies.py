@@ -116,6 +116,9 @@ class CategoricalDistribution():
     def log_prob(self, actions: torch.Tensor) -> torch.Tensor:
         return self.distribution.log_prob(actions)
 
+    def all_probs(self):
+        return self.distribution.probs
+
     def entropy(self) -> torch.Tensor:
         return self.distribution.entropy()
 
@@ -438,7 +441,7 @@ if __name__ == '__main__':
     loc_features = torch.randn((bacth_size, vehicle_num * loc_dim))
     weight_features = torch.randn((bacth_size, 1) + weight_shape)
     actions = None
-    distributions, values, _ = maacp(
+    distributions, values, _ = maacp.forward(
         loc_features=loc_features,
         weight_features=weight_features,
         actions=actions,
@@ -446,6 +449,7 @@ if __name__ == '__main__':
     print(distributions)
     print(distributions[0].get_actions())
     print(distributions[1].get_actions())
+    print(distributions[1].all_probs())
     print(values)
 
     # test action probs
@@ -456,7 +460,7 @@ if __name__ == '__main__':
         np.random.randint(low=0, high=4, size=(bacth_size, vehicle_num))
     )
     print(actions)
-    values, log_probs, entropys = maacp(
+    values, log_probs, entropys = maacp.forward(
         loc_features=loc_features,
         weight_features=weight_features,
         actions=actions,

@@ -7,6 +7,8 @@ import os
 import math
 import random
 
+import torch
+
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
 
@@ -96,6 +98,18 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight))
 
+    def return_allowed_action(self, ending_node):
+        ac_allowed = {0, 1, 2, 3}
+        if ending_node[0] == 0:
+            ac_allowed -= {0}
+        elif ending_node[0] == self.height - 1:
+            ac_allowed -= {3}
+        if ending_node[1] == 0:
+            ac_allowed -= {1}
+        elif ending_node[1] == self.width - 1:
+            ac_allowed -= {2}
+        return ac_allowed
+
     def cal_angle(self, point_1: Union[tuple, list], point_2: Union[tuple, list], point_3: Union[tuple, list]):
         """
         calculating the Angle between the vertices at point_2
@@ -125,17 +139,9 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         :return: - 10000 or list
         '''
 
-        ac_allowed = {0, 1, 2, 3}
         vehicle_loc = vehicle_state[2: 4]
         remaining_time = vehicle_state[4]
-        if vehicle_loc[0] == 0:
-            ac_allowed -= {0}
-        elif vehicle_loc[0] == self.height - 1:
-            ac_allowed -= {3}
-        if vehicle_loc[1] == 0:
-            ac_allowed -= {1}
-        elif vehicle_loc[1] == self.width - 1:
-            ac_allowed -= {2}
+        ac_allowed = self.return_allowed_action(ending_node=vehicle_loc)
         if action not in ac_allowed:
             return - 10000  # reselect the action
 
@@ -177,31 +183,12 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return arrive_path[index]
 
-    def step(self, ac_dict: dict, episode_time_cost):
-        '''
-        Env receives all agents' action and make one timestep forward
-        :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
-        :return:
-        '''
-
-        left_time = self.episode_duration - self.past_time
-        assert left_time > 0 and self.left_reward > 0, 'you need reset the environment first'
-
-        # iterate the item in self.vehicle_action_paths where key value equal to - 10000
-        for i in np.where(np.array(self.vehicle_action_paths) == - 10000)[0]:
-            path = self.determine_path(
-                vehicle_state=self.vehicle_states[i],
-                action=ac_dict[i]
-            )
-            self.vehicle_action_paths[i] = path
-        reselect_agent = np.where(np.array(self.vehicle_action_paths) == - 10000)[0]
-        if len(reselect_agent) > 0:
-            return reselect_agent
+    def execute_action(self, left_time, episode_time_cost):
 
         # start execute the action
         # need calculate return reward
         done = False
-        reward = - 0.1
+        reward = - 0.05
         action_interval = self.action_interval
         if action_interval >= left_time:
             action_interval = left_time
@@ -250,12 +237,62 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             grid_width=self.grid_width,
         )
         self.left_reward = self.grid_weight.sum()
-        if self.left_reward <= 0:
+        if self.left_reward <= 0.4:
             done = True
 
         episode_time_cost += self.action_interval
 
         return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done, episode_time_cost
+
+    def step(self, ac_dict: dict, episode_time_cost):
+        '''
+        Env receives all agents' action and make one timestep forward
+        :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
+        :return:
+        '''
+
+        left_time = self.episode_duration - self.past_time
+        assert left_time > 0 and self.left_reward > 0.4, 'you need reset the environment first'
+
+        # iterate the item in self.vehicle_action_paths where key value equal to - 10000
+        for i in np.where(np.array(self.vehicle_action_paths) == - 10000)[0]:
+            path = self.determine_path(
+                vehicle_state=self.vehicle_states[i],
+                action=ac_dict[i]
+            )
+            self.vehicle_action_paths[i] = path
+        reselect_agent = np.where(np.array(self.vehicle_action_paths) == - 10000)[0]
+        if len(reselect_agent) > 0:
+            return reselect_agent
+
+        return self.execute_action(left_time=left_time, episode_time_cost=episode_time_cost)
+
+    def step_by_action_probs(self, ac_probs_dict: dict, episode_time_cost):
+        '''
+        Env receives all agents' action probability, sampling from it, and make one timestep forward
+        :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value are torch.tensor like
+        [0.2512, 0.2487, 0.2500, 0.2501]
+        :return:
+        '''
+
+        left_time = self.episode_duration - self.past_time
+        assert left_time > 0 and self.left_reward > 0.4, 'you need reset the environment first'
+
+        actions = np.array([np.nan] * self.vehicle_num)
+        for i in range(self.vehicle_num):
+            ac_allowed = list(self.return_allowed_action(ending_node=self.vehicle_states[i, 2: 4]))
+            actions[i] = ac_allowed[torch.multinomial(ac_probs_dict[i][ac_allowed], num_samples=1).item()]
+            path = self.determine_path(
+                vehicle_state=self.vehicle_states[i],
+                action=actions[i]
+            )
+            self.vehicle_action_paths[i] = path
+
+        obs, reward, done, episode_time_cost = self.execute_action(
+            left_time=left_time, episode_time_cost=episode_time_cost
+        )
+
+        return actions, obs, reward, done, episode_time_cost
 
 
 if __name__ == '__main__':
