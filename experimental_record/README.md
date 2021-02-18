@@ -58,3 +58,13 @@ possible problems
 - Location state as input may needs to be encoded. Without encoded can express geographical relation. Or input sparse matrix  with 0 and 1, and same shape as road network.
 - There may be some bug on implementation of environment or policy. Check it.
 - There is hidden state and transformation between making action decision and final executed action which policy cannot learn it's rule.
+
+
+
+## TODO
+
+- [ ] Check environment code logic.
+- [ ] Check policy code logic.
+- [ ] Fix node weight to train.
+- [ ] Change all format of input to matrix.
+- [ ] Modify reward.
