@@ -54,7 +54,7 @@ if __name__ == '__main__':
     gae_lambda = 0.95
     clip_range = 0.2
     clip_range_vf = None
-    ent_coef = 0.0
+    ent_coef = 0.001
     vf_coef = 0.5
     max_grad_norm = 0.5
     target_kl = None
@@ -101,4 +101,4 @@ if __name__ == '__main__':
         seed=seed,
         device=device,
     )
-    model.learn(total_timesteps=1000000)
+    model.learn(total_timesteps=10000000)
