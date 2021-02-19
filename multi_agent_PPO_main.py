@@ -17,7 +17,7 @@ if __name__ == '__main__':
     grid_height = 2
     grid_width = 2
     action_interval = 180
-    episode_duration = None
+    episode_duration = 3600 * 24 * 4
     vehicle_num = 1
 
     loc_dim = 4
