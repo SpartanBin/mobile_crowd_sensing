@@ -72,6 +72,11 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             ])
             self.vehicle_action_paths.append(- 10000)
         self.vehicle_states = np.array(self.vehicle_states)
+        self.generate_grid(
+            grid_height=self.grid_height,
+            grid_width=self.grid_width,
+        )
+        self.grid_weight_ = copy.deepcopy(self.grid_weight)
 
     def reset(self):
         '''
@@ -86,10 +91,11 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.vehicle_states[:, 3] = coordinate_col  # location2 col
         self.vehicle_states[:, 4] = 0  # remaining_time
         self.vehicle_action_paths = [- 10000] * self.vehicle_num
-        self.generate_grid(
-            grid_height=self.grid_height,
-            grid_width=self.grid_width,
-        )
+        # self.generate_grid(
+        #     grid_height=self.grid_height,
+        #     grid_width=self.grid_width,
+        # )
+        self.grid_weight = copy.deepcopy(self.grid_weight_)
         self.cal_node_weight(
             grid_height=self.grid_height,
             grid_width=self.grid_width,
@@ -310,6 +316,7 @@ if __name__ == '__main__':
         action_interval=180,
         episode_duration=3600,
         vehicle_num=vehicle_num,
+        seed=400,
     )
     env.reset()
     st = time.time()
@@ -318,10 +325,10 @@ if __name__ == '__main__':
         for i in range(vehicle_num):
             actions[i] = np.random.randint(low=0, high=4)
 
-        output = env.step(ac_dict=actions)
+        output = env.step(ac_dict=actions, episode_time_cost=0)
         print(env.left_reward)
-        if len(output) == 3:
-            vehicle_states, reward, done = output
+        if type(output) != np.ndarray:
+            vehicle_states, reward, done, episode_time_cost = output
             print(vehicle_states)
             print(reward)
             print(done)

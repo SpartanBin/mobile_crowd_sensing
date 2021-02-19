@@ -63,8 +63,8 @@ possible problems
 
 ## TODO
 
-- [ ] Check environment code logic.
-- [ ] Check policy code logic.
-- [ ] Fix node weight to train.
+- [x] Check environment code logic.
+- [x] Check policy code logic.
+- [x] Fix node weight to train.
 - [ ] Change all format of input to matrix.
 - [ ] Modify reward.
