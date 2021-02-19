@@ -10,7 +10,7 @@ from torch import nn
 from torch.distributions import Categorical
 
 
-class MlpExtractor(nn.Module):
+class MlpConvExtractor(nn.Module):
 
     def __init__(self, loc_feature_dim: list, weight_feature_params: list,
                  output_dim: list, share_params: bool):
@@ -22,7 +22,7 @@ class MlpExtractor(nn.Module):
         :param share_params:
         :return:
         '''
-        super(MlpExtractor, self).__init__()
+        super(MlpConvExtractor, self).__init__()
 
         policy_loc_net = []
         value_loc_net = []
@@ -72,7 +72,7 @@ class MlpExtractor(nn.Module):
         policy_loc_output = self.policy_loc_net(loc_features)
         policy_weight_output = self.policy_weight_net(weight_features)
         policy_output = torch.cat(
-            (policy_loc_output, policy_weight_output.view((policy_weight_output.size()[0], -1))), dim=1)
+            (policy_loc_output, policy_weight_output.flatten(start_dim=1, end_dim=-1)), dim=1)
         policy_output = self.policy_output_net(policy_output)
         value_output = None
         if not self.share_params:
@@ -80,7 +80,61 @@ class MlpExtractor(nn.Module):
             value_weight_output = self.value_weight_net(weight_features)
             value_output = torch.cat(
                 (value_loc_output, value_weight_output.view((value_weight_output.size()[0], -1))), dim=1)
-            value_output = self.policy_output_net(value_output)
+            value_output = self.value_output_net(value_output)
+        return policy_output, value_output
+
+
+class ConvExtractor(nn.Module):
+
+    def __init__(self, conv_params: list, output_dim: list, share_params: bool):
+        '''
+        :param conv_params: type of item in iteration must be dict object, and dict keys are Conv layer
+        param names, key values are allowed param values
+        :param output_dim: type of item in iteration must be int object
+        :param share_params:
+        :return:
+        '''
+        super(ConvExtractor, self).__init__()
+
+        policy_conv_net = []
+        value_conv_net = []
+        for layer_params in conv_params:
+            policy_conv_net.append(nn.Conv2d(**layer_params))
+            policy_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            policy_conv_net.append(nn.ELU())
+            value_conv_net.append(nn.Conv2d(**layer_params))
+            value_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            value_conv_net.append(nn.ELU())
+        self.policy_conv_net = nn.Sequential(*policy_conv_net)
+        self.value_conv_net = nn.Sequential(*value_conv_net)
+
+        policy_output_net = []
+        value_output_net = []
+        for i in range(len(output_dim)):
+            if i > 0:
+                policy_output_net.append(nn.Linear(output_dim[i - 1], output_dim[i]))
+                policy_output_net.append(nn.Tanh())
+                value_output_net.append(nn.Linear(output_dim[i - 1], output_dim[i]))
+                value_output_net.append(nn.Tanh())
+        self.policy_output_net = nn.Sequential(*policy_output_net)
+        self.value_output_net = nn.Sequential(*value_output_net)
+
+        self.share_params = share_params
+        if self.share_params:
+            del self.value_conv_net
+            del self.value_output_net
+
+    def forward(self, features: torch.Tensor):
+        """
+        :return: latent_policy, latent_value of the specified network.
+            If all layers are shared, then ``latent_policy == latent_value``
+        """
+        policy_output = self.policy_conv_net(features).flatten(start_dim=1, end_dim=-1)
+        policy_output = self.policy_output_net(policy_output)
+        value_output = None
+        if not self.share_params:
+            value_output = self.value_conv_net(features).flatten(start_dim=1, end_dim=-1)
+            value_output = self.value_output_net(value_output)
         return policy_output, value_output
 
 
@@ -174,7 +228,7 @@ class ActorCriticPolicy(nn.Module):
 
         self.ortho_init = ortho_init
 
-        self.mlp_extractor = MlpExtractor(
+        self.mlp_extractor = MlpConvExtractor(
             loc_feature_dim=loc_feature_dim,
             weight_feature_params=weight_feature_params,
             output_dim=output_dim,
