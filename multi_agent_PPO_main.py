@@ -59,7 +59,7 @@ if __name__ == '__main__':
     max_grad_norm = 0.5
     target_kl = None
     device = 'cuda'
-    seed = 400
+    seed = 4000
 
     env = generate_rectangle_network_action_destination_env(
         height=height,
