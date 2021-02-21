@@ -101,4 +101,4 @@ if __name__ == '__main__':
         seed=seed,
         device=device,
     )
-    model.learn(total_timesteps=10000000)
+    model.learn(total_timesteps=100000)
