@@ -72,11 +72,11 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             ])
             self.vehicle_action_paths.append(- 10000)
         self.vehicle_states = np.array(self.vehicle_states)
-        self.generate_grid(
-            grid_height=self.grid_height,
-            grid_width=self.grid_width,
-        )
-        self.grid_weight_ = copy.deepcopy(self.grid_weight)
+        # self.generate_grid(
+        #     grid_height=self.grid_height,
+        #     grid_width=self.grid_width,
+        # )
+        # self.grid_weight_ = copy.deepcopy(self.grid_weight)
 
     def reset(self):
         '''
@@ -91,11 +91,11 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.vehicle_states[:, 1] = self.vehicle_states[:, 3].copy()  # location1 col
         self.vehicle_states[:, 4] = 0  # remaining_time
         self.vehicle_action_paths = [- 10000] * self.vehicle_num
-        # self.generate_grid(
-        #     grid_height=self.grid_height,
-        #     grid_width=self.grid_width,
-        # )
-        self.grid_weight = copy.deepcopy(self.grid_weight_)
+        self.generate_grid(
+            grid_height=self.grid_height,
+            grid_width=self.grid_width,
+        )
+        # self.grid_weight = copy.deepcopy(self.grid_weight_)
         self.cal_node_weight(
             grid_height=self.grid_height,
             grid_width=self.grid_width,
