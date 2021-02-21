@@ -18,7 +18,7 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     episode_duration = 3600 * 24 * 4
-    vehicle_num = 4
+    vehicle_num = 10
 
     loc_dim = 4
     weight_shape = (height, width)
@@ -101,4 +101,6 @@ if __name__ == '__main__':
         seed=seed,
         device=device,
     )
-    model.learn(total_timesteps=100000)
+    model.learn(total_timesteps=1000000)
+
+    print('the number of vehicle is {}'.format(vehicle_num))
