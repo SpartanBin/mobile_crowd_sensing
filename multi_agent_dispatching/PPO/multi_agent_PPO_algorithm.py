@@ -91,14 +91,26 @@ class multi_agent_PPO():
             gae_lambda=self.gae_lambda,
             gamma=self.gamma,
         )
+        # self.policy = policies.multi_agent_ACP(
+        #     vehicle_num=self.vehicle_num,
+        #     loc_dim=self.loc_dim,
+        #     weight_shape=self.weight_shape,
+        #     share_policy=self.share_policy,
+        #     ortho_init=self.ortho_init,
+        #     loc_feature_dim=self.loc_feature_dim,
+        #     weight_feature_params=self.weight_feature_params,
+        #     output_dim=self.output_dim,
+        #     share_params=self.share_params,
+        #     action_dim=self.action_dim,
+        #     learning_rate=self.learning_rate,
+        # ).to(self.device).eval()
         self.policy = policies.multi_agent_ACP(
             vehicle_num=self.vehicle_num,
             loc_dim=self.loc_dim,
             weight_shape=self.weight_shape,
             share_policy=self.share_policy,
             ortho_init=self.ortho_init,
-            loc_feature_dim=self.loc_feature_dim,
-            weight_feature_params=self.weight_feature_params,
+            conv_params=self.weight_feature_params,
             output_dim=self.output_dim,
             share_params=self.share_params,
             action_dim=self.action_dim,

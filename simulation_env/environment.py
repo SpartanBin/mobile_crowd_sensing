@@ -83,12 +83,12 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         reset the agents(vehicles) position and grid link_weight(rewards)
         '''
         self.past_time = 0
-        self.vehicle_states[:, 0] = -1  # location1 row
-        self.vehicle_states[:, 1] = -1  # location1 col
         coordinate_row = np.random.randint(low=0, high=self.height, size=self.vehicle_num)
         coordinate_col = np.random.randint(low=0, high=self.width, size=self.vehicle_num)
         self.vehicle_states[:, 2] = coordinate_row  # location2 row
         self.vehicle_states[:, 3] = coordinate_col  # location2 col
+        self.vehicle_states[:, 0] = self.vehicle_states[:, 2].copy()  # location1 row
+        self.vehicle_states[:, 1] = self.vehicle_states[:, 3].copy()  # location1 col
         self.vehicle_states[:, 4] = 0  # remaining_time
         self.vehicle_action_paths = [- 10000] * self.vehicle_num
         # self.generate_grid(
@@ -232,7 +232,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 grid_col = int(ending_node[1] / self.grid_width)
                 reward += self.grid_weight[grid_row, grid_col]
                 self.grid_weight[grid_row, grid_col] = 0
-                self.vehicle_states[i, 0: 2] = -1
+                self.vehicle_states[i, 0: 2] = self.vehicle_states[i, 2: 4].copy()
             else:
                 self.vehicle_states[i, 0: 2] = starting_node
         self.vehicle_action_paths = [- 10000] * self.vehicle_num

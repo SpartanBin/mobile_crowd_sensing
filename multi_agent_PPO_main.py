@@ -27,7 +27,7 @@ if __name__ == '__main__':
     loc_feature_dim = [128]
     weight_feature_params = [
         {
-            'in_channels': 1,
+            'in_channels': 3,
             'out_channels': 64,
             'kernel_size': (5, 5),
             'stride': (2, 2),
@@ -37,13 +37,13 @@ if __name__ == '__main__':
         {
             'in_channels': 64,
             'out_channels': 128,
-            'kernel_size': (5, 5),
+            'kernel_size': (3, 3),
             'stride': (2, 2),
             'padding': (2, 2),
             'dilation': (1, 1),
         },
     ]
-    output_dim = [128, 128]
+    output_dim = [64, 32]
     share_params = False
     action_dim = 4
     learning_rate = 3e-4

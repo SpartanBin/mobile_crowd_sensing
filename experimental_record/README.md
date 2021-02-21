@@ -68,3 +68,4 @@ possible problems
 - [x] Fix node weight to train.
 - [ ] Change all format of input to matrix.
 - [ ] Modify reward.
+- [ ] Try genetic algorithm(if work, then try imitation learning to learn genetic policy). 
