@@ -199,8 +199,12 @@ class multi_agent_PPO():
             )
 
             if done:
-                print('in this episode, all reward = {}, time cost = {}, reselect_action_times = {}'.format(
-                    1 - self.env.left_reward, self.episode_time_cost, self.select_action_time))
+                self.the_last_100_episodes_mean_time_cost.append(self.episode_time_cost)
+                if len(self.the_last_100_episodes_mean_time_cost) > 100:
+                    self.the_last_100_episodes_mean_time_cost.pop(0)
+                print('in this episode, all reward = {}, time cost = {}, reselect_action_times = {}, the_last_100_episodes_mean_time_cost = {}'.format(
+                    1 - self.env.left_reward, self.episode_time_cost, self.select_action_time,
+                    np.mean(self.the_last_100_episodes_mean_time_cost)))
                 self.episode_time_cost = 0
                 new_obs = self.env.reset()
                 self.select_action_time = 0
@@ -309,6 +313,7 @@ class multi_agent_PPO():
 
         self.num_timesteps = 0
         self.episode_time_cost = 0
+        self.the_last_100_episodes_mean_time_cost = []
         self._last_obs = list(self.env.reset())
         self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1))
         self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(
