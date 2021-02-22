@@ -181,6 +181,7 @@ possible problems
 - [x] Check policy code logic.
 - [x] Fix node weight to train.
 - [x] Change all format of input to matrix.
+- [ ] Try greedy reward.
 - [ ] Modify reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [ ] Contrast to Genetic Algorithm.
