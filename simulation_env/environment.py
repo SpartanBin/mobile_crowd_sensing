@@ -247,6 +247,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 if (grid_row, grid_col) not in first_passed_node_vehicle.keys():
                     first_passed_node_vehicle[(grid_row, grid_col)] = {}
                     first_passed_node_vehicle[(grid_row, grid_col)]['vehicle'] = i
+                    first_passed_node_vehicle[(grid_row, grid_col)]['remaining_time'] = remaining_time
                     first_passed_node_vehicle[(grid_row, grid_col)]['reward'] = self.grid_weight[grid_row, grid_col]
                 self.grid_weight[grid_row, grid_col] = 0
                 self.vehicle_states[i, 0: 2] = self.vehicle_states[i, 2: 4].copy()
