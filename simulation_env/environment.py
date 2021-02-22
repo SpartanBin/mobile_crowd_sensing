@@ -194,8 +194,13 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         # start execute the action
         # need calculate return reward
         done = False
-        # reward = - 0.05  # the same reward for all vehicles
-        reward = np.array([- 0.05] * self.vehicle_num)  # greedy reward
+        first_passed_node_vehicle = {}  # for save reward for every vehicle's own
+        reward = np.array([- 0.05] * self.vehicle_num)
+        #################################################################
+        # for calculate distance reward coefficient
+        # all_vehicles_starting_node = copy.deepcopy(self.vehicle_states[:, 0: 2])
+        # all_distance_reward_coef = np.zeros((self.vehicle_num, self.vehicle_num), dtype=np.float32)
+        #################################################################
         action_interval = self.action_interval
         if action_interval >= left_time:
             action_interval = left_time
@@ -214,8 +219,15 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 ending_node = (ending_row, ending_col)
                 grid_row = int(ending_node[0] / self.grid_height)
                 grid_col = int(ending_node[1] / self.grid_width)
-                # reward += self.grid_weight[grid_row, grid_col]  # the same reward for all vehicles
-                reward[i] += self.grid_weight[grid_row, grid_col]  # greedy reward
+                if (grid_row, grid_col) not in first_passed_node_vehicle.keys():
+                    first_passed_node_vehicle[(grid_row, grid_col)] = {}
+                    first_passed_node_vehicle[(grid_row, grid_col)]['vehicle'] = i
+                    first_passed_node_vehicle[(grid_row, grid_col)]['remaining_time'] = remaining_time
+                    first_passed_node_vehicle[(grid_row, grid_col)]['reward'] = self.grid_weight[grid_row, grid_col]
+                else:
+                    if first_passed_node_vehicle[(grid_row, grid_col)]['remaining_time'] < remaining_time:
+                        first_passed_node_vehicle[(grid_row, grid_col)]['vehicle'] = i
+                        first_passed_node_vehicle[(grid_row, grid_col)]['remaining_time'] = remaining_time
                 self.grid_weight[grid_row, grid_col] = 0
                 starting_code = ending_code
                 ending_code = int(path[path_index])
@@ -232,12 +244,24 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             if remaining_time == 0:
                 grid_row = int(ending_node[0] / self.grid_height)
                 grid_col = int(ending_node[1] / self.grid_width)
-                # reward += self.grid_weight[grid_row, grid_col]  # the same reward for all vehicles
-                reward[i] += self.grid_weight[grid_row, grid_col]  # greedy reward
+                if (grid_row, grid_col) not in first_passed_node_vehicle.keys():
+                    first_passed_node_vehicle[(grid_row, grid_col)] = {}
+                    first_passed_node_vehicle[(grid_row, grid_col)]['vehicle'] = i
+                    first_passed_node_vehicle[(grid_row, grid_col)]['reward'] = self.grid_weight[grid_row, grid_col]
                 self.grid_weight[grid_row, grid_col] = 0
                 self.vehicle_states[i, 0: 2] = self.vehicle_states[i, 2: 4].copy()
             else:
                 self.vehicle_states[i, 0: 2] = starting_node
+            #################################################################
+            # calculate distance reward coefficient
+            # all_distance_reward_coef[i] = (
+            #     (all_vehicles_starting_node[i, 0] - all_vehicles_starting_node[:, 0]) ** 2 + (
+            #      all_vehicles_starting_node[i, 1] - all_vehicles_starting_node[:, 1]) ** 2) ** 0.5
+            #################################################################
+
+        for key in first_passed_node_vehicle.keys():
+            v = first_passed_node_vehicle[key]['vehicle']
+            reward[v] += first_passed_node_vehicle[key]['reward']
         self.vehicle_action_paths = [- 10000] * self.vehicle_num
 
         self.past_time += action_interval
@@ -249,8 +273,6 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         if self.left_reward <= 0.4:
             done = True
 
-        if type(reward) != np.ndarray:
-            reward = np.array([reward] * self.vehicle_num)
         episode_time_cost += self.action_interval
 
         return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done, episode_time_cost
