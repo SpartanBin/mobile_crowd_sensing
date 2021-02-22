@@ -201,17 +201,30 @@ class multi_agent_PPO():
             if done:
                 self.the_last_100_episodes_time_cost.append(self.episode_time_cost)
                 self.the_shortest_100_episodes_time_cost.append(self.episode_time_cost)
+                last_100_episodes_mean_time_cost = np.mean(self.the_last_100_episodes_time_cost)
                 if len(self.the_last_100_episodes_time_cost) > 100:
+                    if last_100_episodes_mean_time_cost < self.the_best_last_100_episodes_mean_time_cost:
+                        self.the_best_last_100_episodes_mean_time_cost = last_100_episodes_mean_time_cost
                     if self.the_first_100_episodes_mean_time_cost is None:
-                        self.the_first_100_episodes_mean_time_cost = np.mean(self.the_last_100_episodes_time_cost)
+                        self.the_first_100_episodes_mean_time_cost = last_100_episodes_mean_time_cost
                     self.the_last_100_episodes_time_cost.pop(0)
                     self.the_shortest_100_episodes_time_cost.sort()
                     self.the_shortest_100_episodes_time_cost.pop()
-                print('in this episode, all reward = {}, time cost = {}, reselect_action_times = {}, the_shortest_100_episodes_mean_time_cost = {}, the_first_100_episodes_mean_time_cost = {}, the_last_100_episodes_mean_time_cost = {}'.format(
+                print('''
+                ******************************************************************************************************
+                in this episode, all reward = {}, time cost = {}, reselect_action_times = {}, 
+                the_shortest_100_episodes_mean_time_cost = {}, 
+                the_first_100_episodes_mean_time_cost = {}, 
+                the_last_100_episodes_mean_time_cost = {}, 
+                the_best_last_100_episodes_mean_time_cost = {}
+                ******************************************************************************************************
+                '''.format(
                     1 - self.env.left_reward, self.episode_time_cost, self.select_action_time,
                     np.mean(self.the_shortest_100_episodes_time_cost),
                     self.the_first_100_episodes_mean_time_cost,
-                    np.mean(self.the_last_100_episodes_time_cost)))
+                    last_100_episodes_mean_time_cost,
+                    self.the_best_last_100_episodes_mean_time_cost
+                ))
                 self.episode_time_cost = 0
                 new_obs = self.env.reset()
                 self.select_action_time = 0
@@ -321,6 +334,7 @@ class multi_agent_PPO():
         self.num_timesteps = 0
         self.episode_time_cost = 0
         self.the_last_100_episodes_time_cost = []
+        self.the_best_last_100_episodes_mean_time_cost = np.inf
         self.the_shortest_100_episodes_time_cost = []
         self.the_first_100_episodes_mean_time_cost = None
         self._last_obs = list(self.env.reset())
