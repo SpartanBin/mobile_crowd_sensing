@@ -104,7 +104,7 @@ same to experiment 1
 
 ### result
 
-- Model converged to average 10000 seconds cost until episode over in one vehicle condition(in random policy, finishing an episode needs about 130000 seconds cost).
+- Model converged to average 10000 seconds cost until episode over in one vehicle condition(in random policy, finishing an episode needs about 90000 seconds cost).
 
 
 
@@ -149,13 +149,29 @@ same to experiment 2
 
 ### result
 
-- 
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 1                      | 14929            | 92967             | 10720                    |
+| 2                      | 12825            | 45137             | 7468                     |
+| 4                      | 9280             | 17481             | 4099                     |
+| 10                     | 3163             | 4884              | 1512                     |
+| 20                     | 1492             | 1671              | 642                      |
+
+Last 100 episode: the last 100 episodes mean time cost(seconds), could represent the performance of trained policy.
+
+First 100 episode: the first 100 episodes mean time cost(seconds), could represent the performance of random policy.
+
+The shortest 100 episode: the shortest 100 episodes mean time cost(seconds), could represent the best performance of policy.
 
 
 
 ### discussion
 
-- 
+- In one vehicle condition, model can find a well policy, but the more vehicles there are, the harder it is to find a better policy.
+
+possible problems
+
+- Reward design may lead to this result. When step to next timestep, all vehicle receive the same reward. It maybe causes vehicle to confuse the value of its own behavior with that of other vehicles. Try to give a greedy reward and a corporative reward to vehicle.
 
 
 
@@ -165,6 +181,6 @@ same to experiment 2
 - [x] Check policy code logic.
 - [x] Fix node weight to train.
 - [x] Change all format of input to matrix.
-- [ ] ~~Modify reward.~~
+- [ ] Modify reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [ ] Contrast to Genetic Algorithm.
