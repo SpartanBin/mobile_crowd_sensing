@@ -308,7 +308,6 @@ class CategoricalDistribution():
 #     def __init__(
 #             self,
 #             vehicle_num: int,
-#             loc_dim: int,
 #             weight_shape: Union[tuple, list],
 #             share_policy: bool,
 #             ortho_init: bool,
@@ -326,11 +325,10 @@ class CategoricalDistribution():
 #         '''
 #
 #         self.vehicle_num = vehicle_num
-#         self.loc_dim = loc_dim
 #         self.weight_shape = weight_shape
 #         self.share_policy = share_policy
 #
-#         loc_feature_dim = [(vehicle_num + 1) * loc_dim] + loc_feature_dim
+#         loc_feature_dim = [(vehicle_num + 1) * 4] + loc_feature_dim
 #         conv_output_shape = copy.deepcopy(weight_shape)
 #         for params in weight_feature_params:
 #             if 'padding' not in params:
@@ -431,7 +429,7 @@ class CategoricalDistribution():
 #             distributions = []
 #             for i in range(self.vehicle_num):
 #                 input_loc_features = loc_features.clone()
-#                 vehicle_loc = input_loc_features[:, self.loc_dim * i: self.loc_dim * (i + 1)].clone()
+#                 vehicle_loc = input_loc_features[:, 4 * i: 4 * (i + 1)].clone()
 #                 input_loc_features = torch.cat((vehicle_loc, input_loc_features), dim=1)
 #                 distribution, value, _ = self.ACP[i](input_loc_features, weight_features, None)
 #                 values.append(value)
@@ -443,7 +441,7 @@ class CategoricalDistribution():
 #             entropys = []
 #             for i in range(self.vehicle_num):
 #                 input_loc_features = loc_features.clone()
-#                 vehicle_loc = input_loc_features[:, self.loc_dim * i: self.loc_dim * (i + 1)].clone()
+#                 vehicle_loc = input_loc_features[:, 4 * i: 4 * (i + 1)].clone()
 #                 input_loc_features = torch.cat((vehicle_loc, input_loc_features), dim=1)
 #                 value, log_prob, entropy = self.ACP[i](input_loc_features, weight_features, actions[:, i])
 #                 values.append(value)
@@ -558,7 +556,6 @@ class multi_agent_ACP():
     def __init__(
             self,
             vehicle_num: int,
-            loc_dim: int,
             weight_shape: Union[tuple, list],
             share_policy: bool,
             ortho_init: bool,
@@ -574,7 +571,6 @@ class multi_agent_ACP():
         '''
 
         self.vehicle_num = vehicle_num
-        self.loc_dim = loc_dim
         self.weight_shape = weight_shape
         self.share_policy = share_policy
 
@@ -727,7 +723,6 @@ class multi_agent_ACP():
 # if __name__ == '__main__':
 #
 #     vehicle_num = 50
-#     loc_dim = 4
 #     weight_shape = (20, 20)
 #     share_policy = True
 #     ortho_init = True
@@ -747,7 +742,6 @@ class multi_agent_ACP():
 #
 #     maacp = multi_agent_ACP(
 #         vehicle_num=vehicle_num,
-#         loc_dim=loc_dim,
 #         weight_shape=weight_shape,
 #         share_policy=share_policy,
 #         ortho_init=ortho_init,
@@ -761,7 +755,7 @@ class multi_agent_ACP():
 #
 #     # test decision making
 #     bacth_size = 1
-#     loc_features = torch.randn((bacth_size, vehicle_num * loc_dim))
+#     loc_features = torch.randn((bacth_size, vehicle_num * 4))
 #     weight_features = torch.randn((bacth_size, 1) + weight_shape)
 #     actions = None
 #     distributions, values, _ = maacp.forward(
@@ -777,7 +771,7 @@ class multi_agent_ACP():
 #
 #     # test action probs
 #     bacth_size = 100
-#     loc_features = torch.randn((bacth_size, vehicle_num * loc_dim))
+#     loc_features = torch.randn((bacth_size, vehicle_num * 4))
 #     weight_features = torch.randn((bacth_size, 1) + weight_shape)
 #     actions = torch.tensor(
 #         np.random.randint(low=0, high=4, size=(bacth_size, vehicle_num))

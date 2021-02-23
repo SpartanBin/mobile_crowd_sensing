@@ -18,8 +18,9 @@ class multi_agent_PPO():
     def __init__(
         self,
         env,
+        reward_type,
+        negative_constant_reward,
         vehicle_num: int,
-        loc_dim: int,
         weight_shape: Tuple[int, int],
         share_policy: bool,
         ortho_init: bool,
@@ -57,10 +58,11 @@ class multi_agent_PPO():
         self.learning_rate = learning_rate
 
         self.env = env
+        self.reward_type = reward_type
+        self.negative_constant_reward = negative_constant_reward
 
         self.n_steps = n_steps
         self.vehicle_num = vehicle_num
-        self.loc_dim = loc_dim
         self.weight_shape = weight_shape
         self.device = torch.device(device)
         self.gae_lambda = gae_lambda
@@ -85,7 +87,6 @@ class multi_agent_PPO():
         self.rollout_buffer = buffers.RolloutBuffer(
             buffer_size=self.n_steps,
             vehicle_num=self.vehicle_num,
-            loc_dim=self.loc_dim,
             weight_shape=self.weight_shape,
             device=self.device,
             gae_lambda=self.gae_lambda,
@@ -93,7 +94,6 @@ class multi_agent_PPO():
         )
         # self.policy = policies.multi_agent_ACP(
         #     vehicle_num=self.vehicle_num,
-        #     loc_dim=self.loc_dim,
         #     weight_shape=self.weight_shape,
         #     share_policy=self.share_policy,
         #     ortho_init=self.ortho_init,
@@ -106,7 +106,6 @@ class multi_agent_PPO():
         # ).to(self.device).eval()
         self.policy = policies.multi_agent_ACP(
             vehicle_num=self.vehicle_num,
-            loc_dim=self.loc_dim,
             weight_shape=self.weight_shape,
             share_policy=self.share_policy,
             ortho_init=self.ortho_init,
@@ -137,7 +136,11 @@ class multi_agent_PPO():
     #             actions[i] = action
     #             log_probs[i] = log_prob.cpu().numpy()[0]
     #
-    #         env_returns = env.step(ac_dict, episode_time_cost)
+    #         env_returns = env.step(
+    #             ac_dict=ac_dict,
+    #             reward_type = self.reward_type,
+    #             negative_constant_reward = self.negative_constant_reward,
+    #             episode_time_cost=episode_time_cost)
     #         if type(env_returns) == np.ndarray:
     #             reselect_agent = env_returns
     #         else:
@@ -158,6 +161,8 @@ class multi_agent_PPO():
 
         actions, new_obs, rewards, done, episode_time_cost = env.step_by_action_probs(
             ac_probs_dict=ac_probs_dict,
+            reward_type=self.reward_type,
+            negative_constant_reward=self.negative_constant_reward,
             episode_time_cost=episode_time_cost,
         )
 
@@ -212,14 +217,15 @@ class multi_agent_PPO():
                     self.the_shortest_100_episodes_time_cost.pop()
                 print('''
                 ******************************************************************************************************
-                in this episode, all reward = {}, time cost = {}, reselect_action_times = {}, 
+                in this episode, the number of vehicle is {}, 
+                all reward = {}, time cost = {}, reselect_action_times = {}, 
                 the_shortest_100_episodes_mean_time_cost = {}, 
                 the_first_100_episodes_mean_time_cost = {}, 
                 the_last_100_episodes_mean_time_cost = {}, 
                 the_best_last_100_episodes_mean_time_cost = {}
                 ******************************************************************************************************
                 '''.format(
-                    1 - self.env.left_reward, self.episode_time_cost, self.select_action_time,
+                    self.vehicle_num, 1 - self.env.left_reward, self.episode_time_cost, self.select_action_time,
                     np.mean(self.the_shortest_100_episodes_time_cost),
                     self.the_first_100_episodes_mean_time_cost,
                     last_100_episodes_mean_time_cost,

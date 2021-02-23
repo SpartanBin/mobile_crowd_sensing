@@ -34,7 +34,6 @@ class RolloutBuffer():
         self,
         buffer_size: int,
         vehicle_num: int,
-        loc_dim: int,
         weight_shape: tuple,
         device: Union[torch.device, str] = "cpu",
         gae_lambda: float = 1,
@@ -42,7 +41,6 @@ class RolloutBuffer():
     ):
         '''
         :param buffer_size: Max number of element in the buffer
-        :param loc_dim: Observation vehicle dimension
         :param weight_shape: Observation weight shape
         :param device:
         :param gae_lambda: Factor for trade-off of bias vs variance for Generalized Advantage Estimator
@@ -51,7 +49,6 @@ class RolloutBuffer():
         '''
         self.buffer_size = buffer_size
         self.vehicle_num = vehicle_num
-        self.loc_dim = loc_dim
         self.weight_shape = weight_shape
         self.pos = 0
         self.full = False
@@ -64,7 +61,7 @@ class RolloutBuffer():
         self.reset()
 
     def reset(self) -> None:
-        self.loc = np.zeros((self.buffer_size, self.vehicle_num * self.loc_dim), dtype=np.float32)
+        self.loc = np.zeros((self.buffer_size, self.vehicle_num * 4), dtype=np.float32)
         self.weight = np.zeros((self.buffer_size,) + self.weight_shape, dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.rewards = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)

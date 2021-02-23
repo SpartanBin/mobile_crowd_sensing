@@ -20,7 +20,8 @@ if __name__ == '__main__':
     episode_duration = 3600 * 24 * 4
     vehicle_num = 10
 
-    loc_dim = 4
+    reward_type = 'greedy_mean'  # allowed values are 'greedy', 'sum', 'greedy_mean', 'distance'
+    negative_constant_reward = -0.005
     weight_shape = (height, width)
     share_policy = True
     ortho_init = True
@@ -76,8 +77,9 @@ if __name__ == '__main__':
 
     model = multi_agent_PPO(
         env=env,
+        reward_type=reward_type,
+        negative_constant_reward=negative_constant_reward,
         vehicle_num=vehicle_num,
-        loc_dim=loc_dim,
         weight_shape=weight_shape,
         share_policy=share_policy,
         ortho_init=ortho_init,
@@ -102,5 +104,3 @@ if __name__ == '__main__':
         device=device,
     )
     model.learn(total_timesteps=1000000)
-
-    print('the number of vehicle is {}'.format(vehicle_num))

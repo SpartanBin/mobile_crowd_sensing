@@ -189,17 +189,27 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return arrive_path[index]
 
-    def execute_action(self, left_time, episode_time_cost):
+    def execute_action(self, left_time, reward_type, negative_constant_reward, episode_time_cost):
+        '''
+
+        :param left_time:
+        :param reward_type: 'greedy', 'sum', 'greedy_mean', 'distance' are allowed value
+        :param negative_constant_reward: In past experiments, when reward_type is 'sum', negative_constant_reward is
+        equal to -0.05
+        :param episode_time_cost:
+        :return:
+        '''
 
         # start execute the action
-        # need calculate return reward
+        assert reward_type == 'greedy' or reward_type == 'sum' or reward_type == 'greedy_mean' or \
+               reward_type == 'distance', "'greedy', 'sum', 'greedy_mean', 'distance' are allowed reward_type's value"
         done = False
         first_passed_node_vehicle = {}  # for save reward for every vehicle's own
-        reward = np.array([- 0.05] * self.vehicle_num)
+        reward = np.zeros(self.vehicle_num, dtype=np.float32)
         #################################################################
         # for calculate distance reward coefficient
-        # all_vehicles_starting_node = copy.deepcopy(self.vehicle_states[:, 0: 2])
-        # all_distance_reward_coef = np.zeros((self.vehicle_num, self.vehicle_num), dtype=np.float32)
+        all_vehicles_starting_node = copy.deepcopy(self.vehicle_states[:, 0: 2])
+        all_distance_reward_coef = np.zeros((self.vehicle_num, self.vehicle_num), dtype=np.float32)
         #################################################################
         action_interval = self.action_interval
         if action_interval >= left_time:
@@ -255,14 +265,38 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
                 self.vehicle_states[i, 0: 2] = starting_node
             #################################################################
             # calculate distance reward coefficient
-            # all_distance_reward_coef[i] = (
-            #     (all_vehicles_starting_node[i, 0] - all_vehicles_starting_node[:, 0]) ** 2 + (
-            #      all_vehicles_starting_node[i, 1] - all_vehicles_starting_node[:, 1]) ** 2) ** 0.5
+            if reward_type == 'distance':
+                all_distance_reward_coef[:, i] = (
+                    (all_vehicles_starting_node[i, 0] - all_vehicles_starting_node[:, 0]) ** 2 + (
+                     all_vehicles_starting_node[i, 1] - all_vehicles_starting_node[:, 1]) ** 2) ** 0.5
             #################################################################
+
+        #################################################################
+        # calculate distance reward coefficient
+        if reward_type == 'distance':
+            all_distance_reward_coef = all_distance_reward_coef / (self.height ** 2 + self.width ** 2) ** 0.5
+            all_distance_reward_coef = np.tanh(all_distance_reward_coef)
+            all_distance_reward_coef[(range(self.vehicle_num), range(self.vehicle_num))] = 1
+        #################################################################
 
         for key in first_passed_node_vehicle.keys():
             v = first_passed_node_vehicle[key]['vehicle']
             reward[v] += first_passed_node_vehicle[key]['reward']
+
+        #################################################################
+        # calculate final reward
+        if reward_type == 'distance':
+            reward = np.dot(reward.reshape(1, -1), all_distance_reward_coef)
+        elif reward_type == 'sum':
+            reward[:] = np.sum(reward)
+        elif reward_type == 'greedy_mean':
+            reward += np.mean(reward)
+        #################################################################
+
+        if negative_constant_reward > 0:
+            reward -= negative_constant_reward
+        else:
+            reward += negative_constant_reward
         self.vehicle_action_paths = [- 10000] * self.vehicle_num
 
         self.past_time += action_interval
@@ -278,10 +312,13 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done, episode_time_cost
 
-    def step(self, ac_dict: dict, episode_time_cost):
+    def step(self, ac_dict: dict, reward_type, negative_constant_reward, episode_time_cost):
         '''
         Env receives all agents' action and make one timestep forward
         :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
+        :param reward_type:
+        :param negative_constant_reward:
+        :param episode_time_cost:
         :return:
         '''
 
@@ -299,13 +336,21 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         if len(reselect_agent) > 0:
             return reselect_agent
 
-        return self.execute_action(left_time=left_time, episode_time_cost=episode_time_cost)
+        return self.execute_action(
+            left_time=left_time,
+            reward_type=reward_type,
+            negative_constant_reward=negative_constant_reward,
+            episode_time_cost=episode_time_cost,
+        )
 
-    def step_by_action_probs(self, ac_probs_dict: dict, episode_time_cost):
+    def step_by_action_probs(self, ac_probs_dict: dict, reward_type, negative_constant_reward, episode_time_cost):
         '''
         Env receives all agents' action probability, sampling from it, and make one timestep forward
-        :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value are torch.tensor like
+        :param ac_probs_dict: dict, key allowed in list(range(self.vehicle_num)), key value are torch.tensor like
         [0.2512, 0.2487, 0.2500, 0.2501]
+        :param reward_type:
+        :param negative_constant_reward:
+        :param episode_time_cost:
         :return:
         '''
 
@@ -323,7 +368,10 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             self.vehicle_action_paths[i] = path
 
         obs, reward, done, episode_time_cost = self.execute_action(
-            left_time=left_time, episode_time_cost=episode_time_cost
+            left_time=left_time,
+            reward_type=reward_type,
+            negative_constant_reward=negative_constant_reward,
+            episode_time_cost=episode_time_cost,
         )
 
         return actions, obs, reward, done, episode_time_cost
@@ -333,7 +381,7 @@ if __name__ == '__main__':
 
     import time
 
-    vehicle_num = 50
+    vehicle_num = 4
     env = generate_rectangle_network_action_destination_env(
         height=20,
         width=20,
@@ -353,7 +401,12 @@ if __name__ == '__main__':
         for i in range(vehicle_num):
             actions[i] = np.random.randint(low=0, high=4)
 
-        output = env.step(ac_dict=actions, episode_time_cost=0)
+        output = env.step(
+            ac_dict=actions,
+            reward_type='greedy_mean',
+            negative_constant_reward=0,
+            episode_time_cost=0,
+        )
         print(env.left_reward)
         if type(output) != np.ndarray:
             vehicle_states, reward, done, episode_time_cost = output

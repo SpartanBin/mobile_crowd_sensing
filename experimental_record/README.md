@@ -175,13 +175,112 @@ possible problems
 
 
 
+## experiment 4
+
+
+
+### Environment
+
+same to experiment 3
+
+#### timestep
+
+same to experiment 3
+
+#### reward
+
+- Return reward swatch to every vehicle's own rewards earned(greedy reward), not sum of all.
+- Others are same to experiment 3.
+
+#### state
+
+same to experiment 3
+
+#### action
+
+same to experiment 3
+
+
+
+### model
+
+same to experiment 3
+
+
+
+### result
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      | 13657            | 43528             | 8046                     |
+| 4                      | 7662             | 17626             | 3971                     |
+| 10                     | 2955             | 4885              | 1492                     |
+| 20                     | 1354             | 1672              | 614                      |
+
+
+
+### discussion
+
+- When number of vehicles is more than 2, optimal policy is better than that in returning same reward(experiment 3). This result maybe partially proved same reward causes vehicle to confuse the value of its own behavior with that of other vehicles. Try to give a greedy reward(help to distinguish the value of its own behavior from that of other vehicles) plus the mean of all greedy reward(encourage collaboration).
+
+
+
+## experiment 5
+
+
+
+### Environment
+
+same to experiment 4
+
+#### timestep
+
+same to experiment 4
+
+#### reward
+
+- Return reward swatch to every vehicle's own rewards earned(greedy reward) plus mean of all.
+- Others are same to experiment 4.
+
+#### state
+
+same to experiment 4
+
+#### action
+
+same to experiment 4
+
+
+
+### model
+
+same to experiment 4
+
+
+
+### result
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      |                  |                   |                          |
+| 4                      |                  |                   |                          |
+| 10                     |                  |                   |                          |
+| 20                     |                  |                   |                          |
+
+
+
+### discussion
+
+
+
 ## TODO
 
 - [x] Check environment code logic.
 - [x] Check policy code logic.
 - [x] Fix node weight to train.
 - [x] Change all format of input to matrix.
-- [ ] Try greedy reward.
-- [ ] Modify reward.
+- [x] Try greedy reward.
+- [ ] Try greedy reward plus the mean of all greedy reward.
+- [ ] Try distance weighted reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [ ] Contrast to Genetic Algorithm.
