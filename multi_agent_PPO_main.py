@@ -21,7 +21,8 @@ if __name__ == '__main__':
     vehicle_num = 10
 
     reward_type = 'greedy_mean'  # allowed values are 'greedy', 'sum', 'greedy_mean', 'distance'
-    negative_constant_reward = -0.005
+    cooperative_weight = 0.5
+    negative_constant_reward = -0.05
     weight_shape = (height, width)
     share_policy = True
     ortho_init = True
@@ -78,6 +79,7 @@ if __name__ == '__main__':
     model = multi_agent_PPO(
         env=env,
         reward_type=reward_type,
+        cooperative_weight=cooperative_weight,
         negative_constant_reward=negative_constant_reward,
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,

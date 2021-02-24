@@ -19,6 +19,7 @@ class multi_agent_PPO():
         self,
         env,
         reward_type,
+        cooperative_weight,
         negative_constant_reward,
         vehicle_num: int,
         weight_shape: Tuple[int, int],
@@ -59,6 +60,7 @@ class multi_agent_PPO():
 
         self.env = env
         self.reward_type = reward_type
+        self.cooperative_weight = cooperative_weight
         self.negative_constant_reward = negative_constant_reward
 
         self.n_steps = n_steps
@@ -139,6 +141,7 @@ class multi_agent_PPO():
     #         env_returns = env.step(
     #             ac_dict=ac_dict,
     #             reward_type = self.reward_type,
+    #             cooperative_weight=self.cooperative_weight,
     #             negative_constant_reward = self.negative_constant_reward,
     #             episode_time_cost=episode_time_cost)
     #         if type(env_returns) == np.ndarray:
@@ -162,6 +165,7 @@ class multi_agent_PPO():
         actions, new_obs, rewards, done, episode_time_cost = env.step_by_action_probs(
             ac_probs_dict=ac_probs_dict,
             reward_type=self.reward_type,
+            cooperative_weight=self.cooperative_weight,
             negative_constant_reward=self.negative_constant_reward,
             episode_time_cost=episode_time_cost,
         )

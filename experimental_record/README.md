@@ -262,6 +262,77 @@ same to experiment 4
 
 | the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
 | ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      | 11990            | 42730             | 7249                     |
+| 4                      | 7460             | 16961             | 4167                     |
+| 10                     | 3105             | 4885              | 1525                     |
+| 20                     | 1315             | 1672              | 610                      |
+
+There is another notable result below when change constant negative reward value to -0.005.
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      | 12406            | 42195             | 7207                     |
+| 4                      | 9173             | 18561             | 5040                     |
+| 10                     | 3293             | 5088              | 1661                     |
+| 20                     | 1419             | 1672              | 702                      |
+
+
+
+### discussion
+
+- It is obviously that own rewards plus mean can promote policy, but when the number of vehicles is 10, policy becomes weak. This phenomenon indicates that the result may be leaded by randomness, but it's worth trying again this reward type with more weight(in this experiment, mean weight is equal to 1).
+- Another notable result indicates that constant negative reward value could affect the performance of the policy, which is a parameter that needs to be adjusted.
+
+
+
+## experiment 6
+
+
+
+### Environment
+
+same to experiment 5
+
+#### timestep
+
+same to experiment 5
+
+#### reward
+
+- Return reward swatch to every vehicle's own rewards earned(greedy reward) plus the weighted mean of all. Try the case where the weights are equal to 0.5 and 1.5.
+- Others are same to experiment 5.
+
+#### state
+
+same to experiment 5
+
+#### action
+
+same to experiment 5
+
+
+
+### model
+
+same to experiment 5
+
+
+
+### result
+
+result with 0.5 weight
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      |                  |                   |                          |
+| 4                      |                  |                   |                          |
+| 10                     |                  |                   |                          |
+| 20                     |                  |                   |                          |
+
+result with 1.5 weight
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
 | 2                      |                  |                   |                          |
 | 4                      |                  |                   |                          |
 | 10                     |                  |                   |                          |
@@ -280,7 +351,9 @@ same to experiment 4
 - [x] Fix node weight to train.
 - [x] Change all format of input to matrix.
 - [x] Try greedy reward.
-- [ ] Try greedy reward plus the mean of all greedy reward.
-- [ ] Try distance weighted reward.
+- [x] Try greedy reward plus the mean of all greedy reward.
+- [ ] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [ ] Contrast to Genetic Algorithm.
+- [ ] Try more constant negative reward value.
+- [ ] Try distance weighted reward.

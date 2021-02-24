@@ -189,11 +189,13 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return arrive_path[index]
 
-    def execute_action(self, left_time, reward_type, negative_constant_reward, episode_time_cost):
+    def execute_action(self, left_time, reward_type, cooperative_weight, negative_constant_reward, episode_time_cost):
         '''
 
         :param left_time:
         :param reward_type: 'greedy', 'sum', 'greedy_mean', 'distance' are allowed value
+        :param cooperative_weight: if reward_type is 'greedy_mean', final reward is equal to greedy reward plus product
+        of cooperative_weight multiply by the mean of all greedy rewards
         :param negative_constant_reward: In past experiments, when reward_type is 'sum', negative_constant_reward is
         equal to -0.05
         :param episode_time_cost:
@@ -290,7 +292,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         elif reward_type == 'sum':
             reward[:] = np.sum(reward)
         elif reward_type == 'greedy_mean':
-            reward += np.mean(reward)
+            reward += cooperative_weight * np.mean(reward)
         #################################################################
 
         if negative_constant_reward > 0:
@@ -312,11 +314,13 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done, episode_time_cost
 
-    def step(self, ac_dict: dict, reward_type, negative_constant_reward, episode_time_cost):
+    def step(self, ac_dict: dict, reward_type, cooperative_weight, negative_constant_reward, episode_time_cost):
         '''
         Env receives all agents' action and make one timestep forward
         :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
         :param reward_type:
+        :param cooperative_weight: if reward_type is 'greedy_mean', final reward is equal to greedy reward plus product
+        of cooperative_weight multiply by the mean of all greedy rewards
         :param negative_constant_reward:
         :param episode_time_cost:
         :return:
@@ -339,16 +343,20 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         return self.execute_action(
             left_time=left_time,
             reward_type=reward_type,
+            cooperative_weight=cooperative_weight,
             negative_constant_reward=negative_constant_reward,
             episode_time_cost=episode_time_cost,
         )
 
-    def step_by_action_probs(self, ac_probs_dict: dict, reward_type, negative_constant_reward, episode_time_cost):
+    def step_by_action_probs(self, ac_probs_dict: dict, reward_type, cooperative_weight, negative_constant_reward,
+                             episode_time_cost):
         '''
         Env receives all agents' action probability, sampling from it, and make one timestep forward
         :param ac_probs_dict: dict, key allowed in list(range(self.vehicle_num)), key value are torch.tensor like
         [0.2512, 0.2487, 0.2500, 0.2501]
         :param reward_type:
+        :param cooperative_weight: if reward_type is 'greedy_mean', final reward is equal to greedy reward plus product
+        of cooperative_weight multiply by the mean of all greedy rewards
         :param negative_constant_reward:
         :param episode_time_cost:
         :return:
@@ -370,6 +378,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         obs, reward, done, episode_time_cost = self.execute_action(
             left_time=left_time,
             reward_type=reward_type,
+            cooperative_weight=cooperative_weight,
             negative_constant_reward=negative_constant_reward,
             episode_time_cost=episode_time_cost,
         )
@@ -404,6 +413,7 @@ if __name__ == '__main__':
         output = env.step(
             ac_dict=actions,
             reward_type='greedy_mean',
+            cooperative_weight=0.5,
             negative_constant_reward=0,
             episode_time_cost=0,
         )
