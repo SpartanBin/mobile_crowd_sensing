@@ -333,14 +333,16 @@ result with 1.5 weight
 
 | the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
 | ---------------------- | ---------------- | ----------------- | ------------------------ |
-| 2                      |                  |                   |                          |
-| 4                      |                  |                   |                          |
-| 10                     |                  |                   |                          |
-| 20                     |                  |                   |                          |
+| 2                      | 11438            | 39739             | 7119                     |
+| 4                      | 7070             | 19178             | 3886                     |
+| 10                     | 3140             | 4885              | 1570                     |
+| 20                     | 1367             | 1672              | 625                      |
 
 
 
 ### discussion
+
+Except for the case where the vehicle is equal to 10, setting the weight to 0.5 is better. I think maybe 10 cars is close to saturation for the current environment, because the optimized policy is not significantly better than the random policy. It is necessary to set up a independent testing environment to analyze the relationship between the number of vehicles and the weight of rewards.
 
 
 
@@ -352,7 +354,7 @@ result with 1.5 weight
 - [x] Change all format of input to matrix.
 - [x] Try greedy reward.
 - [x] Try greedy reward plus the mean of all greedy reward.
-- [ ] Try greedy reward plus the weighted mean of all greedy reward.
+- [x] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [ ] Contrast to Genetic Algorithm.
 - [ ] Try more constant negative reward value.
