@@ -27,6 +27,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         ortho_init: bool,
         loc_feature_dim: Union[list, tuple],
         weight_feature_params: Union[list, tuple],
+        add_BN: bool,
         output_dim: Union[list, tuple],
         share_params: bool,
         action_dim: int,
@@ -66,6 +67,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.ortho_init = ortho_init
         self.loc_feature_dim = loc_feature_dim
         self.weight_feature_params = weight_feature_params
+        self.add_BN = add_BN
         self.output_dim = output_dim
         self.share_params = share_params
         self.action_dim = action_dim
@@ -94,6 +96,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         #     ortho_init=self.ortho_init,
         #     loc_feature_dim=self.loc_feature_dim,
         #     weight_feature_params=self.weight_feature_params,
+        #     add_BN=self.add_BN,
         #     output_dim=self.output_dim,
         #     share_params=self.share_params,
         #     action_dim=self.action_dim,
@@ -105,6 +108,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             share_policy=self.share_policy,
             ortho_init=self.ortho_init,
             conv_params=self.weight_feature_params,
+            add_BN=self.add_BN,
             output_dim=self.output_dim,
             share_params=self.share_params,
             action_dim=self.action_dim,

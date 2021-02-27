@@ -69,6 +69,7 @@ if __name__ == '__main__':
         weight_shape=weight_shape,
         share_policy=share_policy,
         conv_params=weight_feature_params,
+        add_BN=False,
         output_dim=output_dim,
         action_dim=action_dim,
         num_episodes_to_cal=num_episodes_to_cal,

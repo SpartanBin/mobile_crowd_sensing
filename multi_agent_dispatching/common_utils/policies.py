@@ -13,11 +13,12 @@ from torch.distributions import Categorical
 class MlpConvExtractor(nn.Module):
 
     def __init__(self, loc_feature_dim: list, weight_feature_params: list,
-                 output_dim: list, share_params: bool):
+                 add_BN: bool, output_dim: list, share_params: bool):
         '''
         :param loc_feature_dim: type of item in iteration must be int object
         :param weight_feature_params: type of item in iteration must be dict object, and dict keys are Conv layer
         param names, key values are allowed param values
+        :param add_BN:
         :param output_dim: type of item in iteration must be int object
         :param share_params:
         :return:
@@ -39,10 +40,12 @@ class MlpConvExtractor(nn.Module):
         value_weight_net = []
         for layer_params in weight_feature_params:
             policy_weight_net.append(nn.Conv2d(**layer_params))
-            policy_weight_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            if add_BN:
+                policy_weight_net.append(nn.BatchNorm2d(layer_params['out_channels']))
             policy_weight_net.append(nn.ELU())
             value_weight_net.append(nn.Conv2d(**layer_params))
-            value_weight_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            if add_BN:
+                value_weight_net.append(nn.BatchNorm2d(layer_params['out_channels']))
             value_weight_net.append(nn.ELU())
         self.policy_weight_net = nn.Sequential(*policy_weight_net)
         self.value_weight_net = nn.Sequential(*value_weight_net)
@@ -86,10 +89,11 @@ class MlpConvExtractor(nn.Module):
 
 class ConvExtractor(nn.Module):
 
-    def __init__(self, conv_params: list, output_dim: list, share_params: bool):
+    def __init__(self, conv_params: list, add_BN: bool, output_dim: list, share_params: bool):
         '''
         :param conv_params: type of item in iteration must be dict object, and dict keys are Conv layer
         param names, key values are allowed param values
+        :param add_BN:
         :param output_dim: type of item in iteration must be int object
         :param share_params:
         :return:
@@ -100,10 +104,12 @@ class ConvExtractor(nn.Module):
         value_conv_net = []
         for layer_params in conv_params:
             policy_conv_net.append(nn.Conv2d(**layer_params))
-            # policy_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            if add_BN:
+                policy_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
             policy_conv_net.append(nn.ELU())
             value_conv_net.append(nn.Conv2d(**layer_params))
-            # value_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            if add_BN:
+                value_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
             value_conv_net.append(nn.ELU())
         self.policy_conv_net = nn.Sequential(*policy_conv_net)
         self.value_conv_net = nn.Sequential(*value_conv_net)
@@ -459,6 +465,7 @@ class ActorCriticPolicy(nn.Module):
         self,
         ortho_init: bool,
         conv_params: list,
+        add_BN: bool,
         output_dim: list,
         share_params: bool,
         action_dim: int,
@@ -468,6 +475,7 @@ class ActorCriticPolicy(nn.Module):
         :param ortho_init:
         :param conv_params: type of item in iteration must be dict object, and dict keys are Conv layer
         param names, key values are allowed param values
+        :param add_BN:
         :param output_dim: type of item in iteration must be int object
         :param share_params:
         :param action_dim:
@@ -480,6 +488,7 @@ class ActorCriticPolicy(nn.Module):
 
         self.mlp_extractor = ConvExtractor(
             conv_params=conv_params,
+            add_BN=add_BN,
             output_dim=output_dim,
             share_params=share_params
         )
@@ -560,6 +569,7 @@ class multi_agent_ACP():
             share_policy: bool,
             ortho_init: bool,
             conv_params: list,
+            add_BN: bool,
             output_dim: list,
             share_params: bool,
             action_dim: int,
@@ -598,6 +608,7 @@ class multi_agent_ACP():
                 self.ACP[i] = ActorCriticPolicy(
                     ortho_init=ortho_init,
                     conv_params=conv_params,
+                    add_BN=add_BN,
                     output_dim=output_dim,
                     share_params=share_params,
                     action_dim=action_dim,
@@ -610,6 +621,7 @@ class multi_agent_ACP():
                     self.ACP[i] = ActorCriticPolicy(
                         ortho_init=ortho_init,
                         conv_params=conv_params,
+                        add_BN=add_BN,
                         output_dim=output_dim,
                         share_params=share_params,
                         action_dim=action_dim,

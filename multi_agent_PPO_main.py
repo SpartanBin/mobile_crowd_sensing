@@ -45,6 +45,7 @@ if __name__ == '__main__':
             'dilation': (1, 1),
         },
     ]
+    add_BN = True
     output_dim = [64, 32]
     share_params = False
     action_dim = 4
@@ -87,6 +88,7 @@ if __name__ == '__main__':
         ortho_init=ortho_init,
         loc_feature_dim=loc_feature_dim,
         weight_feature_params=weight_feature_params,
+        add_BN=add_BN,
         output_dim=output_dim,
         share_params=share_params,
         action_dim=action_dim,

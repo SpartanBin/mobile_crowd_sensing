@@ -184,16 +184,15 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         weight_shape,
         share_policy,
         conv_params,
+        add_BN,
         output_dim,
         action_dim,
         num_episodes_to_cal,
-
         pop_size,
         bound: Optional[np.ndarray] = None,
         GenomeClass=GenomeBinary,
         cross_prob=0.8,
         mutate_prob=0.03,
-
         seed: int = 4000,
     ):
         """
@@ -225,6 +224,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         self.weight_shape = weight_shape
         self.share_policy = share_policy
         self.weight_feature_params = conv_params
+        self.add_BN = add_BN
         self.output_dim = output_dim
         self.action_dim = action_dim
 
@@ -234,6 +234,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             share_policy=self.share_policy,
             ortho_init=True,
             conv_params=self.weight_feature_params,
+            add_BN=self.add_BN,
             output_dim=self.output_dim,
             share_params=False,
             action_dim=self.action_dim,
