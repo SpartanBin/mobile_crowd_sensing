@@ -100,10 +100,10 @@ class ConvExtractor(nn.Module):
         value_conv_net = []
         for layer_params in conv_params:
             policy_conv_net.append(nn.Conv2d(**layer_params))
-            policy_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            # policy_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
             policy_conv_net.append(nn.ELU())
             value_conv_net.append(nn.Conv2d(**layer_params))
-            value_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
+            # value_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
             value_conv_net.append(nn.ELU())
         self.policy_conv_net = nn.Sequential(*policy_conv_net)
         self.value_conv_net = nn.Sequential(*value_conv_net)
@@ -646,6 +646,18 @@ class multi_agent_ACP():
         for i in range(self.vehicle_num):
             self.ACP[i].eval()
         return self
+
+    def state_dict(self):
+        ACP_params = {}
+        for key in self.ACP.keys():
+            if (self.share_policy and key == 0) or (not self.share_policy):
+                ACP_params[key] = self.ACP[key].state_dict()
+        return ACP_params
+
+    def load_state_dict(self, ACP_params):
+        for key in self.ACP.keys():
+            if (self.share_policy and key == 0) or (not self.share_policy):
+                self.ACP[key].load_state_dict(ACP_params[key])
 
     def optimize(self, loss: torch.Tensor, max_grad_norm):
 
