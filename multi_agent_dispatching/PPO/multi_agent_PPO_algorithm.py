@@ -158,7 +158,9 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     self.the_shortest_100_episodes_time_cost.pop()
                 print('''
                 ******************************************************************************************************
-                in this episode, the number of vehicle is {}, 
+                in this episode, the number of vehicle is {}, reward_type is '{}', 
+                cooperative_weight is {}, negative_constant_reward is {}, 
+                ------------------------------------------------------------------------------------------------------
                 all reward = {}, time cost = {}, reselect_action_times = {}, 
                 the_shortest_100_episodes_mean_time_cost = {}, 
                 the_first_100_episodes_mean_time_cost = {}, 
@@ -166,7 +168,8 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 the_best_last_100_episodes_mean_time_cost = {}
                 ******************************************************************************************************
                 '''.format(
-                    self.vehicle_num, 1 - self.env.left_reward, self.episode_time_cost, self.select_action_time,
+                    self.vehicle_num, self.reward_type, self.cooperative_weight, self.negative_constant_reward,
+                    1 - self.env.left_reward, self.episode_time_cost, self.select_action_time,
                     np.mean(self.the_shortest_100_episodes_time_cost),
                     self.the_first_100_episodes_mean_time_cost,
                     last_100_episodes_mean_time_cost,
