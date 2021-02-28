@@ -20,7 +20,8 @@ if __name__ == '__main__':
     episode_duration = 3600 * 24 * 4
     vehicle_num = 10
 
-    reward_type = 'greedy_mean'  # allowed values are 'greedy', 'sum', 'greedy_mean', 'distance'
+    # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
+    reward_type = 'team_spirit'
     cooperative_weight = 0.5
     negative_constant_reward = -0.05
     weight_shape = (height, width)

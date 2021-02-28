@@ -193,9 +193,10 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         '''
 
         :param left_time:
-        :param reward_type: 'greedy', 'sum', 'greedy_mean', 'distance' are allowed value
-        :param cooperative_weight: if reward_type is 'greedy_mean', final reward is equal to greedy reward plus product
-        of cooperative_weight multiply by the mean of all greedy rewards
+        :param reward_type: 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance' are allowed value
+        :param cooperative_weight: If reward_type is 'greedy_mean', final reward is equal to "greedy_reward +
+        cooperative_weight * mean_of_all_greedy_rewards". And if reward_type is 'team_spirit', final reward is
+        equal to "(1 - cooperative_weight) * greedy_reward + cooperative_weight * mean_of_all_greedy_rewards".
         :param negative_constant_reward: In past experiments, when reward_type is 'sum', negative_constant_reward is
         equal to -0.05
         :param episode_time_cost:
@@ -204,7 +205,8 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         # start execute the action
         assert reward_type == 'greedy' or reward_type == 'sum' or reward_type == 'greedy_mean' or \
-               reward_type == 'distance', "'greedy', 'sum', 'greedy_mean', 'distance' are allowed reward_type's value"
+               reward_type == 'team_spirit' or reward_type == 'distance', \
+               "'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance' are allowed reward_type value"
         done = False
         first_passed_node_vehicle = {}  # for save reward for every vehicle's own
         reward = np.zeros(self.vehicle_num, dtype=np.float32)
@@ -293,6 +295,8 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             reward[:] = np.sum(reward)
         elif reward_type == 'greedy_mean':
             reward += cooperative_weight * np.mean(reward)
+        elif reward_type == 'team_spirit':
+            reward = reward * (1 - cooperative_weight) + np.mean(reward) * cooperative_weight
         #################################################################
 
         if negative_constant_reward > 0:
@@ -319,8 +323,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         Env receives all agents' action and make one timestep forward
         :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3
         :param reward_type:
-        :param cooperative_weight: if reward_type is 'greedy_mean', final reward is equal to greedy reward plus product
-        of cooperative_weight multiply by the mean of all greedy rewards
+        :param cooperative_weight:
         :param negative_constant_reward:
         :param episode_time_cost:
         :return:
@@ -355,8 +358,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         :param ac_probs_dict: dict, key allowed in list(range(self.vehicle_num)), key value are torch.tensor like
         [0.2512, 0.2487, 0.2500, 0.2501]
         :param reward_type:
-        :param cooperative_weight: if reward_type is 'greedy_mean', final reward is equal to greedy reward plus product
-        of cooperative_weight multiply by the mean of all greedy rewards
+        :param cooperative_weight:
         :param negative_constant_reward:
         :param episode_time_cost:
         :return:
