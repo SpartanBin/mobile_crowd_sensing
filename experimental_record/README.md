@@ -346,6 +346,116 @@ Except for the case where the vehicle is equal to 10, setting the weight to 0.5 
 
 
 
+## experiment 7: Genetic Algorithm
+
+
+
+### Environment
+
+same to experiment 6
+
+#### timestep
+
+same to experiment 6
+
+#### optimization objective
+
+Maximize (1 / episode_duration).
+
+#### state
+
+same to experiment 6
+
+#### action
+
+same to experiment 6
+
+
+
+### model
+
+- The deep learning part is the same as experiment 6.
+- Optimization method change to Genetic Algorithm(GA) with roulette wheel selection, binary coded genome and fitness who is the inverse of episode duration.
+
+
+
+### result
+
+
+
+### discussion
+
+
+
+## experiment 8
+
+
+
+### Environment
+
+same to experiment 6
+
+#### timestep
+
+same to experiment 6
+
+#### reward
+
+- Try 'greedy_mean' reward which cooperative_weight is 0.5 and 'greedy' reward.
+- Others are same to experiment 6.
+
+#### state
+
+same to experiment 6
+
+#### action
+
+same to experiment 6
+
+
+
+### model
+
+same to experiment 6
+
+
+
+### result
+
+results summary
+
+| the number of vehicles | greedy_mean(with 0.5 weight)(last 100 episode) | greedy(last 100 episode) |
+| ---------------------- | ---------------------------------------------- | ------------------------ |
+| 2                      | 11670                                          | 13657                    |
+| 4                      | 6779                                           | 7662                     |
+| 6                      |                                                |                          |
+| 8                      |                                                |                          |
+| 10                     | 3165                                           | 2955                     |
+| 12                     |                                                |                          |
+| 20                     | 1260                                           | 1354                     |
+
+result with 'greedy_mean' reward which cooperative_weight is 0.5
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 6                      |                  |                   |                          |
+| 8                      |                  |                   |                          |
+| 12                     |                  |                   |                          |
+
+result with 'greedy' reward
+
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 6                      |                  |                   |                          |
+| 8                      |                  |                   |                          |
+| 12                     |                  |                   |                          |
+
+
+
+### discussion
+
+
+
 ## TODO
 
 - [x] Check environment code logic.
@@ -357,5 +467,6 @@ Except for the case where the vehicle is equal to 10, setting the weight to 0.5 
 - [x] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [ ] Contrast to Genetic Algorithm.
+- [ ] Compare the performance of 'greedy_mean' reward which cooperative_weight is 0.5 and 'greedy' reward on 6, 8 and 12 vehicles condition respectively.
 - [ ] Try more constant negative reward value.
 - [ ] Try distance weighted reward.
