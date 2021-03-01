@@ -13,7 +13,6 @@ from multi_agent_dispatching.common_utils import policies, multi_agent_control
 
 
 def params_to_chrom(multi_agent_params):
-    """ 模型参数转码为染色体 """
     chrom = np.empty(0)
     for v in multi_agent_params.keys():
         for key in multi_agent_params[v].keys():
@@ -23,7 +22,6 @@ def params_to_chrom(multi_agent_params):
 
 
 def chrom_to_params(chrom, multi_agent_params):
-    """ 染色体转码为模型参数（需参数模版） """
     multi_agent_params_c = copy.deepcopy(multi_agent_params)
     idx = 0
     for v in multi_agent_params_c.keys():
@@ -37,76 +35,52 @@ def chrom_to_params(chrom, multi_agent_params):
 
 
 class Genome():
-    """ 种群基因组，用于管理整个种群的染色体，数据分布为 U(0, 1)
-
-    Args:
-        pop_size: 种群规模
-        chrom_len: 染色体长度
-
-    Attributes:
-        pop_size: 种群规模
-        chrom_len: 染色体长度
-        data: 基因组数据
-        best: 最佳染色体
-    """
 
     def __init__(self, pop_size, chrom_len):
-        """ 初始化种群 """
         self.pop_size = pop_size
         self.chrom_len = chrom_len
         self.data = None
         self.best = None
 
     def select(self, fitness_array):
-        """ 选择 """
         raise NotImplementedError()
 
     def cross(self, cross_prob):
-        """ 交叉 """
         raise NotImplementedError()
 
     def mutate(self, mutate_prob, progress):
-        """ 突变 """
         raise NotImplementedError()
 
     def __getitem__(self, index):
-        """ 直接获取内部数据 """
         return self.data[index].copy()
 
     def __setitem__(self, index, value):
-        """ 直接修改内部数据 """
         self.data[index] = value.copy()
 
     def _to_view(self, chrom):
-        """ 将编码数据转换为可视化模式，分布仍为 U(0, 1) """
         raise NotImplementedError()
 
     def view(self, index, bound):
-        """ 获取某一项编码数据的真实分布数据 """
         chrom = self._to_view(self.data[index])
         return (bound[1] - bound[0]) * chrom + bound[0]
 
     def view_best(self, bound):
-        """ 获取最佳编码数据的真实分布数据 """
         chrom = self._to_view(self.best)
         return (bound[1] - bound[0]) * chrom + bound[0]
 
 
 class GenomeReal(Genome):
-    """ 实值编码基因组 """
 
     def __init__(self, pop_size, chrom_len):
         super().__init__(pop_size, chrom_len)
         self.data = np.random.uniform(0, 1, size=(pop_size, chrom_len))
 
     def select(self, fitness_array):
-        """ 选择 """
         indices = np.random.choice(np.arange(
             self.pop_size), size=self.pop_size, p=fitness_array/fitness_array.sum())
         self.data[:], fitness_array[:] = self.data[indices], fitness_array[indices]
 
     def cross(self, cross_prob):
-        """ 交叉 """
         for idx in range(self.pop_size):
             if np.random.rand() < cross_prob:
                 idx_other = np.random.choice(
@@ -120,7 +94,6 @@ class GenomeReal(Genome):
                     cross_rate * self.data[idx, cross_points]
 
     def mutate(self, mutate_prob, progress):
-        """ 突变 """
         for idx in range(self.pop_size):
             if np.random.rand() < mutate_prob:
                 mutate_position = np.random.choice(
@@ -129,12 +102,10 @@ class GenomeReal(Genome):
                     np.random.randint(2)-self.data[idx][mutate_position]) * (1-progress)**2
 
     def _to_view(self, chrom):
-        """ 将编码数据转换为可视化模式，分布仍为 U(0, 1) """
         return chrom
 
 
 class GenomeBinary(Genome):
-    """ 二进制编码基因组 """
 
     def __init__(self, pop_size, chrom_len, code_len=16):
         super().__init__(pop_size, chrom_len)
@@ -145,13 +116,11 @@ class GenomeBinary(Genome):
             self.binary_template[i] = (2**i) / 2**code_len
 
     def select(self, fitness_array):
-        """ 选择 """
         indices = np.random.choice(np.arange(
             self.pop_size), size=self.pop_size, p=fitness_array/fitness_array.sum())
         self.data[:], fitness_array[:] = self.data[indices], fitness_array[indices]
 
     def cross(self, cross_prob):
-        """ 交叉 """
         for idx in range(self.pop_size):
             if np.random.rand() < cross_prob:
                 idx_other = np.random.choice(
@@ -163,7 +132,6 @@ class GenomeBinary(Genome):
                               cross_points], self.data[idx, cross_points]
 
     def mutate(self, mutate_prob, progress):
-        """ 突变 """
         for idx in range(self.pop_size):
             if np.random.rand() < mutate_prob:
                 mutate_position = np.random.choice(
@@ -171,7 +139,6 @@ class GenomeBinary(Genome):
                 self.data[idx][mutate_position] = ~self.data[idx][mutate_position]
 
     def _to_view(self, chrom):
-        """ 将编码数据转换为可视化模式，分布仍为 U(0, 1) """
         return np.sum(chrom.reshape(self.chrom_len, self.code_len) * self.binary_template, axis=-1)
 
 
@@ -205,9 +172,9 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         :param action_dim:
         :param pop_size: population size
         :param bound: model parameters' lower bound and upper bound
-        :param GenomeClass: 基因组所使用的编码（实值编码：GenomeReal，二进制编码：GenomeBinary）
-        :param cross_prob: 交叉概率
-        :param mutate_prob: 变异概率
+        :param GenomeClass: the code used by the genome
+        :param cross_prob: crossover probability
+        :param mutate_prob: mutation probability
         :return:
         """
 
@@ -262,13 +229,11 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         self.update_records()
 
     def update_records(self):
-        """ 更新最佳记录 """
         best_index = np.argmax(self.fitness_array)
         self.genome.best = self.genome[best_index]
         self.best_fitness = self.fitness_array[best_index]
 
     def replace(self):
-        """ 使用前代最佳替换本代最差 """
         worst_index = np.argmin(self.fitness_array)
         self.genome[worst_index] = self.genome.best
         self.fitness_array[worst_index] = self.best_fitness
@@ -307,7 +272,6 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         return fitness, mean_episode_time_cost
 
     def update_fitness(self):
-        """ 重新计算适应度 """
         new_obs = self.env.reset()
         episodes_time_cost = []
         for idx in range(self.pop_size):
@@ -322,7 +286,6 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         return np.min(episodes_time_cost)
 
     def genetic(self, num_gen):
-        """ 开始运行遗传算法 """
 
         for e in range(num_gen):
             self.genome.select(self.fitness_array)
@@ -365,5 +328,4 @@ class multi_agent_GA(multi_agent_control.multi_agent):
                 self.update_records()
 
     def result(self):
-        """ 输出最佳染色体 """
         return self.genome.view_best(self.bound)
