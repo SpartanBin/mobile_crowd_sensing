@@ -28,22 +28,40 @@ if __name__ == '__main__':
     share_policy = True
     ortho_init = True
     loc_feature_dim = [128]
+    # weight_feature_params = [
+    #     {
+    #         'in_channels': 3,
+    #         'out_channels': 64,
+    #         'kernel_size': (5, 5),
+    #         'stride': (2, 2),
+    #         'padding': (2, 2),
+    #         'dilation': (1, 1),
+    #     },
+    #     {
+    #         'in_channels': 64,
+    #         'out_channels': 128,
+    #         'kernel_size': (3, 3),
+    #         'stride': (2, 2),
+    #         'padding': (2, 2),
+    #         'dilation': (1, 1),
+    #     },
+    # ]
     weight_feature_params = [
         {
             'in_channels': 3,
             'out_channels': 64,
-            'kernel_size': (5, 5),
-            'stride': (2, 2),
-            'padding': (2, 2),
-            'dilation': (1, 1),
+            'kernel_size': 5,
+            'stride': 2,
+            'padding': 2,
+            'dilation': 1,
         },
         {
             'in_channels': 64,
             'out_channels': 128,
-            'kernel_size': (3, 3),
-            'stride': (2, 2),
-            'padding': (2, 2),
-            'dilation': (1, 1),
+            'kernel_size': 3,
+            'stride': 2,
+            'padding': 2,
+            'dilation': 1,
         },
     ]
     add_BN = True
