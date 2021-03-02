@@ -1,6 +1,8 @@
 import sys
 import os
-from typing import Optional, Union, Tuple
+from typing import Optional, Union
+import copy
+import pickle
 
 import numpy as np
 import torch
@@ -267,30 +269,71 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 print(f"Early stopping at step {epoch} due to reaching max kl: {np.mean(approx_kl_divs):.2f}")
                 break
 
-    def learn(self, total_timesteps: int):
+    def test(self, test_episode_times: int):
+        self.policy.eval()
+        env = copy.deepcopy(self.env)
+        new_obs = env.reset()
+        episode_time_costs = []
+        for _ in range(test_episode_times):
+            done = False
+            episode_time_cost = 0
+            while not done:
+                new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
+                new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
+                with torch.no_grad():
+                    loc_features = new_obs[0]
+                    weight_features = new_obs[1]
+                    distributions, _, _ = self.policy.forward(
+                        loc_features=loc_features,
+                        weight_features=weight_features,
+                    )
+                _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
+                    env=env,
+                    distributions=distributions,
+                    episode_time_cost=episode_time_cost,
+                )
+            episode_time_costs.append(episode_time_cost)
+            new_obs = env.reset()
+        return np.mean(episode_time_costs)
 
-        super(multi_agent_PPO, self).learn()
+    def learn(self, total_timesteps: int, test_every_train_sessions: int,
+              test_episode_times: int, lowest_train_time_cost_to_test: Union[float, int]):
 
+        self.init_learn()
+        self.cur_state = float('inf')
+        self.best_state = {'episode_time_cost': float('inf'), 'policy_params': self.policy.state_dict()}
+
+        train_session = 0
         while self.num_timesteps < total_timesteps:
             self.collect_rollouts()
+            if self.the_best_last_100_episodes_mean_time_cost <= lowest_train_time_cost_to_test:
+                self.cur_state = self.test(test_episode_times=test_episode_times)
+                print('''
+                *********************************************************************************
+                low train time cost trigger this test: 
+                current test episode_time_cost = {}, 
+                best test episode_time_cost = {}
+                *********************************************************************************
+                '''.format(self.cur_state, self.best_state['episode_time_cost']))
+                if self.cur_state < self.best_state['episode_time_cost']:
+                    self.best_state['episode_time_cost'] = self.cur_state
+                    self.best_state['policy_params'] = self.policy.state_dict()
             self.train()
-            print('training successful')
-
-    def predict(self, observation: Tuple[np.ndarray, np.ndarray]):
-        """
-        Get the model's action(s) from an observation
-
-        :param observation: the input observation
-        :return: the model's action and the next state
-            (used in recurrent policies)
-        """
-        self.policy.eval()
-        loc_features = torch.as_tensor(observation[0].astype(np.float32).reshape((1, -1))).to(self.device)
-        weight_features = torch.as_tensor(observation[1].astype(np.float32).reshape(
-            (1, 1,) + self._last_obs[1].shape)).to(self.device)
-        with torch.no_grad():
-            distributions, values, _ = self.policy.forward(
-                loc_features=loc_features,
-                weight_features=weight_features,
-            )
-        return distributions
+            train_session += 1
+            print('training successful in {}th training session'.format(train_session))
+            if train_session % test_every_train_sessions == 0 and self.num_timesteps >= (total_timesteps / 5):
+                self.cur_state = self.test(test_episode_times=test_episode_times)
+                print('''
+                *********************************************************************************
+                training session trigger this test: 
+                current test episode_time_cost = {}, 
+                best test episode_time_cost = {}
+                *********************************************************************************
+                '''.format(self.cur_state, self.best_state['episode_time_cost']))
+                if self.cur_state < self.best_state['episode_time_cost']:
+                    self.best_state['episode_time_cost'] = self.cur_state
+                    self.best_state['policy_params'] = self.policy.state_dict()
+                elif self.best_state['episode_time_cost'] <= self.cur_state / 10:
+                    with open('PPO_AC_params.pickle', 'wb') as file:
+                        pickle.dump(self.best_state['policy_params'], file)
+                    break

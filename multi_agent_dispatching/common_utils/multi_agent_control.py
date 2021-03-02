@@ -98,7 +98,7 @@ class multi_agent():
 
         return actions, log_probs, new_obs, rewards, done, episode_time_cost
 
-    def learn(self):
+    def init_learn(self):
 
         self.num_timesteps = 0
         self.episode_time_cost = 0

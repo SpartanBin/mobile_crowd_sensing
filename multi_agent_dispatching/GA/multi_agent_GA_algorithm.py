@@ -223,7 +223,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
 
         self.fitness_array = np.zeros(pop_size)
         self.genome = GenomeClass(pop_size=pop_size, chrom_len=chrom_len)
-        self.learn()
+        self.init_learn()
         self.update_fitness()
         self.best_fitness = 0
         self.update_records()

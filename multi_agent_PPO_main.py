@@ -19,6 +19,7 @@ if __name__ == '__main__':
     action_interval = 180
     episode_duration = 3600 * 24 * 4
     vehicle_num = 2
+    lowest_train_time_cost_to_test = 16000
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'
@@ -57,7 +58,7 @@ if __name__ == '__main__':
     gae_lambda = 0.95
     clip_range = 0.2
     clip_range_vf = None
-    ent_coef = 0  # In OpenAI Five, when set this to 0.01, policy performs best
+    ent_coef = 0.01  # In OpenAI Five, when set this to 0.01, policy performs best
     vf_coef = 0.5
     max_grad_norm = 0.5
     target_kl = None
@@ -106,4 +107,9 @@ if __name__ == '__main__':
         seed=seed,
         device=device,
     )
-    model.learn(total_timesteps=1000000)
+    model.learn(
+        total_timesteps=1000000,
+        test_every_train_sessions=10,
+        test_episode_times=100,
+        lowest_train_time_cost_to_test=lowest_train_time_cost_to_test,
+    )
