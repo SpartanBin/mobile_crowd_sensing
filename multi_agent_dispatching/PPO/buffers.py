@@ -1,17 +1,16 @@
-from typing import Optional, Union, NamedTuple
+from typing import Optional, NamedTuple
 
 import numpy as np
-import torch
 
 
 class RolloutBufferSamples(NamedTuple):
-    loc: torch.Tensor
-    weight: torch.Tensor
-    actions: torch.Tensor
-    old_values: torch.Tensor
-    old_log_prob: torch.Tensor
-    advantages: torch.Tensor
-    returns: torch.Tensor
+    loc: np.ndarray
+    weight: np.ndarray
+    actions: np.ndarray
+    old_values: np.ndarray
+    old_log_prob: np.ndarray
+    advantages: np.ndarray
+    returns: np.ndarray
 
 
 class RolloutBuffer():
@@ -34,15 +33,13 @@ class RolloutBuffer():
         self,
         buffer_size: int,
         vehicle_num: int,
-        weight_shape: tuple,
-        device: Union[torch.device, str] = "cpu",
+        weight_shape: int,
         gae_lambda: float = 1,
         gamma: float = 0.99,
     ):
         '''
         :param buffer_size: Max number of element in the buffer
         :param weight_shape: Observation weight shape
-        :param device:
         :param gae_lambda: Factor for trade-off of bias vs variance for Generalized Advantage Estimator
         Equivalent to classic advantage when set to 1.
         :param gamma: Discount factor
@@ -52,7 +49,6 @@ class RolloutBuffer():
         self.weight_shape = weight_shape
         self.pos = 0
         self.full = False
-        self.device = device
         self.gae_lambda = gae_lambda
         self.gamma = gamma
         self.loc, self.weight, self.actions, self.rewards, self.advantages = None, None, None, None, None
@@ -61,8 +57,8 @@ class RolloutBuffer():
         self.reset()
 
     def reset(self) -> None:
-        self.loc = np.zeros((self.buffer_size, self.vehicle_num * 4), dtype=np.float32)
-        self.weight = np.zeros((self.buffer_size,) + self.weight_shape, dtype=np.float32)
+        self.loc = np.zeros((self.buffer_size, self.vehicle_num * 2), dtype=np.float32)
+        self.weight = np.zeros((self.buffer_size, self.weight_shape), dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.rewards = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.returns = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
@@ -76,7 +72,7 @@ class RolloutBuffer():
 
     def add(
         self, obs: list, actions: np.ndarray, reward: np.ndarray,
-            done: bool, value: torch.Tensor, log_prob: np.ndarray,
+            done: bool, value: np.ndarray, log_prob: np.ndarray,
     ) -> None:
         """
         :param obs: Observation, [0] is loc, [1] is weight
@@ -89,18 +85,18 @@ class RolloutBuffer():
             following the current policy.
         """
 
-        self.loc[self.pos] = np.array(obs[0]).copy()
-        self.weight[self.pos] = np.array(obs[1]).copy()
+        self.loc[self.pos] = obs[0].copy()
+        self.weight[self.pos] = obs[1].copy()
         self.actions[self.pos] = actions.copy()
-        self.rewards[self.pos] = np.array(reward).copy()
+        self.rewards[self.pos] = reward.copy()
         self.dones[self.pos] = np.array(done).copy()
-        self.values[self.pos] = value.clone().cpu().numpy()
+        self.values[self.pos] = value.copy()
         self.log_probs[self.pos] = log_prob.copy()
         self.pos += 1
         if self.pos == self.buffer_size:
             self.full = True
 
-    def compute_returns_and_advantage(self, last_values: torch.Tensor, done: bool) -> None:
+    def compute_returns_and_advantage(self, last_values: np.ndarray, done: bool) -> None:
         """
         Post-processing step: compute the returns (sum of discounted rewards)
         and GAE advantage.
@@ -116,7 +112,7 @@ class RolloutBuffer():
 
         """
         # convert to numpy
-        last_values = last_values.clone().cpu().numpy()
+        last_values = last_values.copy()
         done = np.array([done] * self.vehicle_num)
 
         last_gae_lam = np.zeros(self.vehicle_num)
@@ -132,7 +128,7 @@ class RolloutBuffer():
             self.advantages[step] = last_gae_lam
         self.returns = self.advantages + self.values
 
-    def to_torch(self, array: np.ndarray, copy: bool = True) -> torch.Tensor:
+    def copy_or_not(self, array: np.ndarray, copy: bool = True) -> np.ndarray:
         """
         Convert a numpy array to a PyTorch tensor.
         Note: it copies the data by default
@@ -143,8 +139,8 @@ class RolloutBuffer():
         :return:
         """
         if copy:
-            return torch.tensor(array).to(self.device)
-        return torch.as_tensor(array).to(self.device)
+            return array.copy()
+        return array
 
     def _get_samples(self, batch_inds: np.ndarray):
         data = (
@@ -156,7 +152,7 @@ class RolloutBuffer():
             self.advantages[batch_inds],
             self.returns[batch_inds],
         )
-        return RolloutBufferSamples(*tuple(map(self.to_torch, data)))
+        return RolloutBufferSamples(*tuple(map(self.copy_or_not, data)))
 
     def get(self, batch_size: Optional[int] = None):
         assert self.full, 'Must fill the container if you want to sample from container'

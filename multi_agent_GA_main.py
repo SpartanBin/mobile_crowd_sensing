@@ -20,27 +20,9 @@ if __name__ == '__main__':
     episode_duration = 3600 * 24 * 4
     vehicle_num = 4
 
-    weight_shape = (height, width)
+    weight_shape = height * width
     share_policy = True
-    # weight_feature_params = [
-    #     {
-    #         'in_channels': 3,
-    #         'out_channels': 64,
-    #         'kernel_size': (5, 5),
-    #         'stride': (2, 2),
-    #         'padding': (2, 2),
-    #         'dilation': (1, 1),
-    #     },
-    #     {
-    #         'in_channels': 64,
-    #         'out_channels': 128,
-    #         'kernel_size': (3, 3),
-    #         'stride': (2, 2),
-    #         'padding': (2, 2),
-    #         'dilation': (1, 1),
-    #     },
-    # ]
-    weight_feature_params = [
+    conv_params = [
         {
             'in_channels': 3,
             'out_channels': 64,
@@ -86,7 +68,7 @@ if __name__ == '__main__':
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,
         share_policy=share_policy,
-        conv_params=weight_feature_params,
+        conv_params=conv_params,
         add_BN=False,
         output_dim=output_dim,
         action_dim=action_dim,

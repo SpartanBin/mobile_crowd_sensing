@@ -22,11 +22,10 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         cooperative_weight,
         negative_constant_reward,
         vehicle_num: int,
-        weight_shape: Tuple[int, int],
+        weight_shape: int,
         share_policy: bool,
         ortho_init: bool,
-        loc_feature_dim: Union[list, tuple],
-        weight_feature_params: Union[list, tuple],
+        conv_params: Union[list, tuple],
         add_BN: bool,
         output_dim: Union[list, tuple],
         share_params: bool,
@@ -65,8 +64,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.gamma = gamma
         self.share_policy = share_policy
         self.ortho_init = ortho_init
-        self.loc_feature_dim = loc_feature_dim
-        self.weight_feature_params = weight_feature_params
+        self.conv_params = conv_params
         self.add_BN = add_BN
         self.output_dim = output_dim
         self.share_params = share_params
@@ -85,29 +83,15 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             buffer_size=self.n_steps,
             vehicle_num=self.vehicle_num,
             weight_shape=self.weight_shape,
-            device=self.device,
             gae_lambda=self.gae_lambda,
             gamma=self.gamma,
         )
-        # self.policy = policies.multi_agent_ACP(
-        #     vehicle_num=self.vehicle_num,
-        #     weight_shape=self.weight_shape,
-        #     share_policy=self.share_policy,
-        #     ortho_init=self.ortho_init,
-        #     loc_feature_dim=self.loc_feature_dim,
-        #     weight_feature_params=self.weight_feature_params,
-        #     add_BN=self.add_BN,
-        #     output_dim=self.output_dim,
-        #     share_params=self.share_params,
-        #     action_dim=self.action_dim,
-        #     learning_rate=self.learning_rate,
-        # ).to(self.device).eval()
         self.policy = policies.multi_agent_ACP(
             vehicle_num=self.vehicle_num,
             weight_shape=self.weight_shape,
             share_policy=self.share_policy,
             ortho_init=self.ortho_init,
-            conv_params=self.weight_feature_params,
+            conv_params=self.conv_params,
             add_BN=self.add_BN,
             output_dim=self.output_dim,
             share_params=self.share_params,
@@ -131,12 +115,13 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
             with torch.no_grad():
                 # Convert to pytorch tensor
-                loc_features = torch.as_tensor(self._last_obs[0]).to(self.device)
-                weight_features = torch.as_tensor(self._last_obs[1]).to(self.device)
+                loc_features = self._last_obs[0]
+                weight_features = self._last_obs[1]
                 distributions, values, _ = self.policy.forward(
                     loc_features=loc_features,
                     weight_features=weight_features,
                 )
+            values = values.cpu().numpy()
 
             actions, log_probs, new_obs, reward, done, self.episode_time_cost = self.make_one_step_forward_for_env(
                 env=self.env,
@@ -178,7 +163,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 self.episode_time_cost = 0
                 new_obs = self.env.reset()
                 self.select_action_time = 0
-            new_obs = list(new_obs)
             new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
             new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
 
@@ -191,12 +175,13 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
         with torch.no_grad():
             # Compute value for the last timestep
-            loc_features = torch.as_tensor(self._last_obs[0]).to(self.device)
-            weight_features = torch.as_tensor(self._last_obs[1]).to(self.device)
+            loc_features = self._last_obs[0]
+            weight_features = self._last_obs[1]
             _, values, _ = self.policy.forward(
                 loc_features=loc_features,
                 weight_features=weight_features,
             )
+        values = values.cpu().numpy()
 
         self.rollout_buffer.compute_returns_and_advantage(last_values=values, done=done)
 
@@ -215,15 +200,14 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
             for rollout_data in self.rollout_buffer.get(self.batch_size):
-                actions = rollout_data.actions.long()
 
                 # Re-sample the noise matrix because the log_std has changed
                 # if that line is commented (as in SAC)
 
                 values, log_prob, entropy = self.policy.forward(
                     loc_features=rollout_data.loc,
-                    weight_features=rollout_data.weight.unsqueeze(dim=1),
-                    actions=actions,
+                    weight_features=rollout_data.weight[:, np.newaxis],
+                    actions=rollout_data.actions,
                 )
 
                 # Normalize advantage
@@ -234,10 +218,13 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 values = torch.flatten(values)
                 log_prob = torch.flatten(log_prob)
                 entropy = torch.flatten(entropy)
-                old_log_prob = torch.flatten(rollout_data.old_log_prob)
-                advantages = torch.flatten(advantages)
-                old_values = torch.flatten(rollout_data.old_values)
-                returns = torch.flatten(rollout_data.returns)
+                old_log_prob = torch.flatten(torch.as_tensor(
+                    rollout_data.old_log_prob, dtype=torch.float32, device=self.device))
+                advantages = torch.flatten(torch.as_tensor(
+                    advantages, dtype=torch.float32, device=self.device))
+                old_values = rollout_data.old_values
+                returns = torch.flatten(torch.as_tensor(
+                    rollout_data.returns, dtype=torch.float32, device=self.device))
 
                 # ratio between old and new policy, should be one at the first iteration
                 ratio = torch.exp(log_prob - old_log_prob)
@@ -253,6 +240,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 else:
                     # Clip the different between old and new value
                     # NOTE: this depends on the reward scaling
+                    old_values = torch.flatten(torch.as_tensor(old_values, dtype=torch.float32, device=self.device))
                     values_pred = old_values + torch.clamp(
                         values - old_values, - self.clip_range_vf, self.clip_range_vf
                     )

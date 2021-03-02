@@ -87,7 +87,7 @@ Use these as policy input.
 
 - Node's weight is same to experiment 1.
 
-- Change location state features to matrix with the same shape like Node's weight. Use two sparse matrix to respectively represent corresponding vehicle's location and all vehicles' location. If vehicle's location on node (13, 14), matrix row 14 column 15 is equal to 1, other no vehicle's location is equal to 0. Matrix one only marks one corresponding vehicle's location and Matrix two marks all vehicle's location.
+- Change location state features to matrix with the same shape as Node's weight. Use two sparse matrix to respectively represent corresponding vehicle's location and all vehicles' location. If vehicle's location is on node (13, 14), matrix row 14 column 15 is equal to 1, other no vehicle's location is equal to 0. Matrix one only marks one corresponding vehicle's location and Matrix two marks all vehicle's location.
 
 #### action
 
@@ -346,48 +346,7 @@ Except for the case where the vehicle is equal to 10, setting the weight to 0.5 
 
 
 
-## experiment 7: Genetic Algorithm
-
-
-
-### Environment
-
-same to experiment 6
-
-#### timestep
-
-same to experiment 6
-
-#### optimization objective
-
-Maximize (1 / episode_duration).
-
-#### state
-
-same to experiment 6
-
-#### action
-
-same to experiment 6
-
-
-
-### model
-
-- The deep learning part is the same as experiment 6.
-- Optimization method change to Genetic Algorithm(GA) with roulette wheel selection, binary coded genome and fitness who is the inverse of episode duration.
-
-
-
-### result
-
-
-
-### discussion
-
-
-
-## experiment 8
+## experiment 7
 
 
 
@@ -401,12 +360,13 @@ same to experiment 6
 
 #### reward
 
-- Try 'greedy_mean' reward which cooperative_weight is 0.5 and 'greedy' reward.
-- Others are same to experiment 6.
+same to experiment 4(greedy reward)
 
 #### state
 
-same to experiment 6
+Use these as policy input.
+
+The shape of the input data is basically the same as Experiment 4, except that all matrix data is flattened. This approach is more general and can be used for any shape of the network, as long as the node weight and position information is converted into the array form like this.
 
 #### action
 
@@ -416,39 +376,126 @@ same to experiment 6
 
 ### model
 
-same to experiment 6
+- The format of the model is basically the same as Experiment 4, except the convolution layer is replaced from 2-dimensional convolution to 1-dimensional convolution.
 
 
 
 ### result
 
-results summary
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      |                  |                   |                          |
+| 4                      |                  |                   |                          |
+| 6                      |                  |                   |                          |
+| 8                      |                  |                   |                          |
+| 10                     |                  |                   |                          |
+| 12                     |                  |                   |                          |
+| 16                     |                  |                   |                          |
+| 20                     |                  |                   |                          |
 
-| the number of vehicles | greedy_mean(with 0.5 weight)(last 100 episode) | greedy(last 100 episode) |
-| ---------------------- | ---------------------------------------------- | ------------------------ |
-| 2                      | 11670                                          | 13657                    |
-| 4                      | 6779                                           | 7662                     |
-| 6                      | 5781                                           | 5612                     |
-| 8                      | 4398                                           | 3910                     |
-| 10                     | 3165                                           | 2955                     |
-| 12                     |                                                |                          |
-| 20                     | 1260                                           | 1354                     |
 
-result with 'greedy_mean' reward which cooperative_weight is 0.5
+
+### discussion
+
+
+
+## experiment 8
+
+
+
+### Environment
+
+same to experiment 7
+
+#### timestep
+
+same to experiment 7
+
+#### reward
+
+- Try 'greedy_mean' reward which cooperative_weight is 0.5.
+- Others are same to experiment 7.
+
+#### state
+
+same to experiment 7
+
+#### action
+
+same to experiment 7
+
+
+
+### model
+
+same to experiment 7
+
+
+
+### result
 
 | the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
 | ---------------------- | ---------------- | ----------------- | ------------------------ |
-| 6                      | 5781             | 10210             | 2844                     |
-| 8                      | 4398             | 6268              | 2219                     |
+| 2                      |                  |                   |                          |
+| 4                      |                  |                   |                          |
+| 6                      |                  |                   |                          |
+| 8                      |                  |                   |                          |
+| 10                     |                  |                   |                          |
 | 12                     |                  |                   |                          |
+| 16                     |                  |                   |                          |
+| 20                     |                  |                   |                          |
 
-result with 'greedy' reward
+
+
+### discussion
+
+
+
+## experiment 9: Genetic Algorithm
+
+
+
+### Environment
+
+same to experiment 8
+
+#### timestep
+
+same to experiment 8
+
+#### optimization objective
+
+Maximize (1 / episode_duration).
+
+#### state
+
+same to experiment 8
+
+#### action
+
+same to experiment 8
+
+
+
+### model
+
+- The deep learning part is the same as experiment 8.
+- Optimization method change to Genetic Algorithm(GA) with roulette wheel selection, binary coded genome and fitness who is the inverse of episode duration.
+
+
+
+### result
 
 | the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
 | ---------------------- | ---------------- | ----------------- | ------------------------ |
-| 6                      | 5612             | 10860             | 3323                     |
-| 8                      | 3910             | 6268              | 1960                     |
+| 2                      |                  |                   |                          |
+| 4                      |                  |                   |                          |
+| 6                      |                  |                   |                          |
+| 8                      |                  |                   |                          |
+| 10                     |                  |                   |                          |
 | 12                     |                  |                   |                          |
+| 16                     |                  |                   |                          |
+| 20                     |                  |                   |                          |
 
 
 
@@ -466,7 +513,7 @@ result with 'greedy' reward
 - [x] Try greedy reward plus the mean of all greedy reward.
 - [x] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
-- [ ] Contrast to Genetic Algorithm.
-- [ ] Compare the performance of 'greedy_mean' reward which cooperative_weight is 0.5 and 'greedy' reward on 6, 8 and 12 vehicles condition respectively.
+- [ ] Change format of input from matrix to array and try GA, RL(with greedy reward and greedy_mean reward).
+- [ ] Try team_spirit reward.
 - [ ] Try more constant negative reward value.
 - [ ] Try distance weighted reward.

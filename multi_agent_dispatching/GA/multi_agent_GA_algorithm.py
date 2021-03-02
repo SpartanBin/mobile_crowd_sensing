@@ -190,7 +190,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
 
         self.weight_shape = weight_shape
         self.share_policy = share_policy
-        self.weight_feature_params = conv_params
+        self.conv_params = conv_params
         self.add_BN = add_BN
         self.output_dim = output_dim
         self.action_dim = action_dim
@@ -200,7 +200,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             weight_shape=self.weight_shape,
             share_policy=self.share_policy,
             ortho_init=True,
-            conv_params=self.weight_feature_params,
+            conv_params=self.conv_params,
             add_BN=self.add_BN,
             output_dim=self.output_dim,
             share_params=False,
@@ -248,12 +248,11 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             done = False
             episode_time_cost = 0
             while not done:
-                new_obs = list(new_obs)
                 new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
                 new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
                 with torch.no_grad():
-                    loc_features = torch.as_tensor(new_obs[0])
-                    weight_features = torch.as_tensor(new_obs[1])
+                    loc_features = new_obs[0]
+                    weight_features = new_obs[1]
                     distributions, _, _ = self.policy.forward(
                         loc_features=loc_features,
                         weight_features=weight_features,

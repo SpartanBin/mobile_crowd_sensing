@@ -1,6 +1,3 @@
-"""Policies: abstract base class and concrete implementations."""
-
-import copy
 from functools import partial
 from typing import Tuple, Union
 
@@ -8,140 +5,6 @@ import numpy as np
 import torch
 from torch import nn
 from torch.distributions import Categorical
-
-
-class MlpConv2dExtractor(nn.Module):
-
-    def __init__(self, loc_feature_dim: list, weight_feature_params: list,
-                 add_BN: bool, output_dim: list, share_params: bool):
-        '''
-        :param loc_feature_dim: type of item in iteration must be int object
-        :param weight_feature_params: type of item in iteration must be dict object, and dict keys are Conv layer
-        param names, key values are allowed param values
-        :param add_BN:
-        :param output_dim: type of item in iteration must be int object
-        :param share_params:
-        :return:
-        '''
-        super(MlpConv2dExtractor, self).__init__()
-
-        policy_loc_net = []
-        value_loc_net = []
-        for i in range(len(loc_feature_dim)):
-            if i > 0:
-                policy_loc_net.append(nn.Linear(loc_feature_dim[i - 1], loc_feature_dim[i]))
-                policy_loc_net.append(nn.Tanh())
-                value_loc_net.append(nn.Linear(loc_feature_dim[i - 1], loc_feature_dim[i]))
-                value_loc_net.append(nn.Tanh())
-        self.policy_loc_net = nn.Sequential(*policy_loc_net)
-        self.value_loc_net = nn.Sequential(*value_loc_net)
-
-        policy_weight_net = []
-        value_weight_net = []
-        for layer_params in weight_feature_params:
-            policy_weight_net.append(nn.Conv2d(**layer_params))
-            if add_BN:
-                policy_weight_net.append(nn.BatchNorm2d(layer_params['out_channels']))
-            policy_weight_net.append(nn.ELU())
-            value_weight_net.append(nn.Conv2d(**layer_params))
-            if add_BN:
-                value_weight_net.append(nn.BatchNorm2d(layer_params['out_channels']))
-            value_weight_net.append(nn.ELU())
-        self.policy_weight_net = nn.Sequential(*policy_weight_net)
-        self.value_weight_net = nn.Sequential(*value_weight_net)
-
-        policy_output_net = []
-        value_output_net = []
-        for i in range(len(output_dim)):
-            if i > 0:
-                policy_output_net.append(nn.Linear(output_dim[i - 1], output_dim[i]))
-                policy_output_net.append(nn.Tanh())
-                value_output_net.append(nn.Linear(output_dim[i - 1], output_dim[i]))
-                value_output_net.append(nn.Tanh())
-        self.policy_output_net = nn.Sequential(*policy_output_net)
-        self.value_output_net = nn.Sequential(*value_output_net)
-
-        self.share_params = share_params
-        if self.share_params:
-            del self.value_loc_net
-            del self.value_weight_net
-            del self.value_output_net
-
-    def forward(self, loc_features: torch.Tensor, weight_features: torch.Tensor):
-        """
-        :return: latent_policy, latent_value of the specified network.
-            If all layers are shared, then ``latent_policy == latent_value``
-        """
-        policy_loc_output = self.policy_loc_net(loc_features)
-        policy_weight_output = self.policy_weight_net(weight_features)
-        policy_output = torch.cat(
-            (policy_loc_output, policy_weight_output.flatten(start_dim=1, end_dim=-1)), dim=1)
-        policy_output = self.policy_output_net(policy_output)
-        value_output = None
-        if not self.share_params:
-            value_loc_output = self.value_loc_net(loc_features)
-            value_weight_output = self.value_weight_net(weight_features)
-            value_output = torch.cat(
-                (value_loc_output, value_weight_output.flatten(start_dim=1, end_dim=-1)), dim=1)
-            value_output = self.value_output_net(value_output)
-        return policy_output, value_output
-
-
-class Conv2dExtractor(nn.Module):
-
-    def __init__(self, conv_params: list, add_BN: bool, output_dim: list, share_params: bool):
-        '''
-        :param conv_params: type of item in iteration must be dict object, and dict keys are Conv layer
-        param names, key values are allowed param values
-        :param add_BN:
-        :param output_dim: type of item in iteration must be int object
-        :param share_params:
-        :return:
-        '''
-        super(Conv2dExtractor, self).__init__()
-
-        policy_conv_net = []
-        value_conv_net = []
-        for layer_params in conv_params:
-            policy_conv_net.append(nn.Conv2d(**layer_params))
-            if add_BN:
-                policy_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
-            policy_conv_net.append(nn.ELU())
-            value_conv_net.append(nn.Conv2d(**layer_params))
-            if add_BN:
-                value_conv_net.append(nn.BatchNorm2d(layer_params['out_channels']))
-            value_conv_net.append(nn.ELU())
-        self.policy_conv_net = nn.Sequential(*policy_conv_net)
-        self.value_conv_net = nn.Sequential(*value_conv_net)
-
-        policy_output_net = []
-        value_output_net = []
-        for i in range(len(output_dim)):
-            if i > 0:
-                policy_output_net.append(nn.Linear(output_dim[i - 1], output_dim[i]))
-                policy_output_net.append(nn.Tanh())
-                value_output_net.append(nn.Linear(output_dim[i - 1], output_dim[i]))
-                value_output_net.append(nn.Tanh())
-        self.policy_output_net = nn.Sequential(*policy_output_net)
-        self.value_output_net = nn.Sequential(*value_output_net)
-
-        self.share_params = share_params
-        if self.share_params:
-            del self.value_conv_net
-            del self.value_output_net
-
-    def forward(self, features: torch.Tensor):
-        """
-        :return: latent_policy, latent_value of the specified network.
-            If all layers are shared, then ``latent_policy == latent_value``
-        """
-        policy_output = self.policy_conv_net(features).flatten(start_dim=1, end_dim=-1)
-        policy_output = self.policy_output_net(policy_output)
-        value_output = None
-        if not self.share_params:
-            value_output = self.value_conv_net(features).flatten(start_dim=1, end_dim=-1)
-            value_output = self.value_output_net(value_output)
-        return policy_output, value_output
 
 
 class Conv1dExtractor(nn.Module):
@@ -355,8 +218,6 @@ class ActorCriticPolicy(nn.Module):
             latent_vf = latent_pi
         value = self.value_net(latent_vf)
         if actions is None:
-            # actions = distribution.get_actions(deterministic=deterministic)
-            # log_prob = distribution.log_prob(actions)
             return distribution, value, None
         else:
             log_prob = distribution.log_prob(actions)
@@ -369,7 +230,7 @@ class multi_agent_ACP():
     def __init__(
             self,
             vehicle_num: int,
-            weight_shape: Union[tuple, list],
+            weight_shape: int,
             share_policy: bool,
             ortho_init: bool,
             conv_params: list,
@@ -385,10 +246,9 @@ class multi_agent_ACP():
         '''
 
         self.vehicle_num = vehicle_num
-        weight_shape = int(weight_shape[0] * weight_shape[1])
         self.share_policy = share_policy
 
-        conv_output_shape = copy.deepcopy(weight_shape)
+        conv_output_shape = weight_shape
         for params in conv_params:
             if 'padding' not in params:
                 if type(conv_output_shape) == tuple:
@@ -412,6 +272,7 @@ class multi_agent_ACP():
                 dilation=params['dilation'],
                 stride=params['stride'],
             )
+        params = conv_params[-1]
         if type(conv_output_shape) == tuple:
             output_dim = [conv_output_shape[0] * conv_output_shape[1] *
                           params['out_channels']] + output_dim
@@ -510,9 +371,9 @@ class multi_agent_ACP():
 
     def forward(
             self,
-            loc_features: torch.Tensor,
-            weight_features: torch.Tensor,
-            actions: Union[torch.Tensor, None] = None):
+            loc_features: np.ndarray,
+            weight_features: np.ndarray,
+            actions: Union[np.ndarray, None] = None):
         """
         Forward pass in all the networks (actor and critic)
 
@@ -520,115 +381,98 @@ class multi_agent_ACP():
         :param weight_features:
         :return: action, value and log probability of the action
         """
-        loc_features = loc_features.cpu().numpy().reshape((loc_features.shape[0], -1, 2))
+        loc_features = loc_features.reshape((loc_features.shape[0], -1, 1))
         index1 = np.repeat(np.array(range(loc_features.shape[0])), self.vehicle_num * 2, axis=0)
         index2 = np.array([0] * len(index1))
         index3 = loc_features[:, :, 0].flatten()
-        index4 = loc_features[:, :, 1].flatten()
-        index = np.vstack((index1, index2, index3, index4))
-
+        index = np.vstack((index1, index2, index3))
         input_all_loc_features = torch.zeros(weight_features.shape, dtype=torch.float32, device=self.device)
         input_all_loc_features[index] = 1
 
+        weight_features = torch.as_tensor(weight_features, dtype=torch.float32, device=self.device)
+        if actions is not None:
+            actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device).long()
+
         values = []
-        if actions is None:
-            distributions = []
-            for i in range(self.vehicle_num):
-                vehicle_index = index[:, list(range(i, index.shape[1], self.vehicle_num * 2)) +
-                                       list(range(i + 1, index.shape[1], self.vehicle_num * 2))]
-                input_loc_features = torch.zeros(weight_features.shape, dtype=torch.float32, device=self.device)
-                input_loc_features[vehicle_index] = 1
-                input_features = torch.cat((input_loc_features, input_all_loc_features, weight_features), dim=1)
-                shape = input_features.shape
-                input_features = input_features.view((shape[0], shape[1], -1))
+        distributions = []
+        log_probs = []
+        entropys = []
+        for i in range(self.vehicle_num):
+            vehicle_index = index[:, list(range(i, index.shape[1], self.vehicle_num * 2)) +
+                                     list(range(i + 1, index.shape[1], self.vehicle_num * 2))]
+            input_loc_features = torch.zeros(weight_features.shape, dtype=torch.float32, device=self.device)
+            input_loc_features[vehicle_index] = 1
+            input_features = torch.cat((input_loc_features, input_all_loc_features, weight_features), dim=1)
+            if actions is None:
                 distribution, value, _ = self.ACP[i](input_features, None)
-                values.append(value)
                 distributions.append(distribution)
-            values = torch.cat(values, dim=1)
-            return distributions, values, None
-        else:
-            log_probs = []
-            entropys = []
-            for i in range(self.vehicle_num):
-                vehicle_index = index[:, list(range(i, index.shape[1], self.vehicle_num * 2)) +
-                                         list(range(i + 1, index.shape[1], self.vehicle_num * 2))]
-                input_loc_features = torch.zeros(weight_features.shape, dtype=torch.float32, device=self.device)
-                input_loc_features[vehicle_index] = 1
-                input_features = torch.cat((input_loc_features, input_all_loc_features, weight_features), dim=1)
-                shape = input_features.shape
-                input_features = input_features.view((shape[0], shape[1], -1))
+            else:
                 value, log_prob, entropy = self.ACP[i](input_features, actions[:, i])
-                values.append(value)
                 log_probs.append(log_prob.view(log_prob.shape + (1,)))
                 entropys.append(entropy.view(log_prob.shape + (1,)))
-            values = torch.cat(values, dim=1)
+            values.append(value)
+        values = torch.cat(values, dim=1)
+        if actions is None:
+            return distributions, values, None
+        else:
             log_probs = torch.cat(log_probs, dim=1)
             entropys = torch.cat(entropys, dim=1)
             return values, log_probs, entropys
 
 
-# if __name__ == '__main__':
-#
-#     vehicle_num = 50
-#     weight_shape = (20, 20)
-#     share_policy = True
-#     ortho_init = True
-#     loc_feature_dim = [64]
-#     weight_feature_params = [{
-#         'in_channels': 1,
-#         'out_channels': 1,
-#         'kernel_size': (3, 3),
-#         'stride': (2, 2),
-#         'padding': (1, 1),
-#         'dilation': (1, 1),
-#     }]
-#     output_dim = [32]
-#     share_params = False
-#     action_dim = 4
-#     learning_rate = 0.0001
-#
-#     maacp = multi_agent_ACP(
-#         vehicle_num=vehicle_num,
-#         weight_shape=weight_shape,
-#         share_policy=share_policy,
-#         ortho_init=ortho_init,
-#         loc_feature_dim=loc_feature_dim,
-#         weight_feature_params=weight_feature_params,
-#         output_dim=output_dim,
-#         share_params=share_params,
-#         action_dim=action_dim,
-#         learning_rate=learning_rate
-#     )
-#
-#     # test decision making
-#     bacth_size = 1
-#     loc_features = torch.randn((bacth_size, vehicle_num * 4))
-#     weight_features = torch.randn((bacth_size, 1) + weight_shape)
-#     actions = None
-#     distributions, values, _ = maacp.forward(
-#         loc_features=loc_features,
-#         weight_features=weight_features,
-#         actions=actions,
-#     )
-#     print(distributions)
-#     print(distributions[0].get_actions())
-#     print(distributions[1].get_actions())
-#     print(distributions[1].all_probs())
-#     print(values)
-#
-#     # test action probs
-#     bacth_size = 100
-#     loc_features = torch.randn((bacth_size, vehicle_num * 4))
-#     weight_features = torch.randn((bacth_size, 1) + weight_shape)
-#     actions = torch.tensor(
-#         np.random.randint(low=0, high=4, size=(bacth_size, vehicle_num))
-#     )
-#     print(actions)
-#     values, log_probs, entropys = maacp.forward(
-#         loc_features=loc_features,
-#         weight_features=weight_features,
-#         actions=actions,
-#     )
-#     print(values)
-#     print(log_probs)
-#     print(entropys)
+if __name__ == '__main__':
+
+    vehicle_num = 50
+    weight_shape = 20 * 20
+    conv_params = [{
+        'in_channels': 3,
+        'out_channels': 1,
+        'kernel_size': 3,
+        'stride': 2,
+        'padding': 1,
+        'dilation': 1,
+    }]
+
+    maacp = multi_agent_ACP(
+        vehicle_num=vehicle_num,
+        weight_shape=weight_shape,
+        share_policy=True,
+        ortho_init=True,
+        conv_params=conv_params,
+        add_BN=True,
+        output_dim=[32],
+        share_params=False,
+        action_dim=4,
+        learning_rate=0.00001
+    )
+
+    # test decision making
+    bacth_size = 1
+    loc_features = np.random.rand(bacth_size, vehicle_num * 2)
+    weight_features = np.random.rand(bacth_size, 1, weight_shape)
+    actions = None
+    distributions, values, _ = maacp.forward(
+        loc_features=loc_features,
+        weight_features=weight_features,
+        actions=actions,
+    )
+    print(distributions)
+    print(distributions[0].get_actions())
+    print(distributions[1].get_actions())
+    print(distributions[1].all_probs())
+    print(values)
+
+    # test action probs
+    bacth_size = 100
+    loc_features = np.random.rand(bacth_size, vehicle_num * 2)
+    weight_features = np.random.rand(bacth_size, 1, weight_shape)
+    actions = np.random.randint(low=0, high=4, size=(bacth_size, vehicle_num))
+    print(actions)
+    values, log_probs, entropys = maacp.forward(
+        loc_features=loc_features,
+        weight_features=weight_features,
+        actions=actions,
+    )
+    print(values)
+    print(log_probs)
+    print(entropys)

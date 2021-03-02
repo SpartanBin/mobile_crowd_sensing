@@ -24,29 +24,10 @@ if __name__ == '__main__':
     reward_type = 'greedy'
     cooperative_weight = 0.5
     negative_constant_reward = -0.05
-    weight_shape = (height, width)
+    weight_shape = height * width
     share_policy = True
     ortho_init = True
-    loc_feature_dim = [128]
-    # weight_feature_params = [
-    #     {
-    #         'in_channels': 3,
-    #         'out_channels': 64,
-    #         'kernel_size': (5, 5),
-    #         'stride': (2, 2),
-    #         'padding': (2, 2),
-    #         'dilation': (1, 1),
-    #     },
-    #     {
-    #         'in_channels': 64,
-    #         'out_channels': 128,
-    #         'kernel_size': (3, 3),
-    #         'stride': (2, 2),
-    #         'padding': (2, 2),
-    #         'dilation': (1, 1),
-    #     },
-    # ]
-    weight_feature_params = [
+    conv_params = [
         {
             'in_channels': 3,
             'out_channels': 64,
@@ -105,8 +86,7 @@ if __name__ == '__main__':
         weight_shape=weight_shape,
         share_policy=share_policy,
         ortho_init=ortho_init,
-        loc_feature_dim=loc_feature_dim,
-        weight_feature_params=weight_feature_params,
+        conv_params=conv_params,
         add_BN=add_BN,
         output_dim=output_dim,
         share_params=share_params,

@@ -102,7 +102,12 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         )
         self.left_reward = self.grid_weight.sum()
 
-        return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight))
+        node_weight = copy.deepcopy(self.node_weight.flatten())
+        vehicle_states_start = (self.vehicle_states[:, 0] * self.width + self.vehicle_states[:, 1]).reshape((-1, 1))
+        vehicle_states_end = (self.vehicle_states[:, 2] * self.width + self.vehicle_states[:, 3]).reshape((-1, 1))
+        vehicle_states = np.hstack((vehicle_states_start, vehicle_states_end))
+
+        return [vehicle_states, node_weight]
 
     def return_allowed_action(self, ending_node):
         ac_allowed = {0, 1, 2, 3}
@@ -316,7 +321,12 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
         episode_time_cost += self.action_interval
 
-        return copy.deepcopy((self.vehicle_states[:, 0: 4], self.node_weight)), reward, done, episode_time_cost
+        node_weight = copy.deepcopy(self.node_weight.flatten())
+        vehicle_states_start = (self.vehicle_states[:, 0] * self.width + self.vehicle_states[:, 1]).reshape((-1, 1))
+        vehicle_states_end = (self.vehicle_states[:, 2] * self.width + self.vehicle_states[:, 3]).reshape((-1, 1))
+        vehicle_states = np.hstack((vehicle_states_start, vehicle_states_end))
+
+        return [vehicle_states, node_weight], reward, done, episode_time_cost
 
     def step(self, ac_dict: dict, reward_type, cooperative_weight, negative_constant_reward, episode_time_cost):
         '''

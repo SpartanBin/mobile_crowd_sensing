@@ -106,7 +106,7 @@ class multi_agent():
         self.the_best_last_100_episodes_mean_time_cost = np.inf
         self.the_shortest_100_episodes_time_cost = []
         self.the_first_100_episodes_mean_time_cost = None
-        self._last_obs = list(self.env.reset())
+        self._last_obs = self.env.reset()
         self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1))
         self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(
             (1, 1,) + self._last_obs[1].shape)
