@@ -346,6 +346,11 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     self.episode, train_session, self.cur_state, self.best_state['episode_time_cost'],
                     self.best_episode, self.best_train_session))
                 if self.best_state['episode_time_cost'] <= self.cur_state / 10:
-                    with open('PPO_AC_params.pickle', 'wb') as file:
-                        pickle.dump(self.best_state['policy_params'], file)
                     break
+
+        self.best_state['best_episode'] = self.best_episode
+        self.best_state['best_train_session'] = self.best_train_session
+        self.best_state['random_policy_episodes_mean_time_cost'] = self.random_policy_episodes_mean_time_cost
+        self.best_state['the_shortest_100_episodes_mean_time_cost'] = np.mean(self.the_shortest_100_episodes_time_cost)
+        with open('PPO_state_vehicle{}.pickle'.format(self.vehicle_num), 'wb') as file:
+            pickle.dump(self.best_state, file)
