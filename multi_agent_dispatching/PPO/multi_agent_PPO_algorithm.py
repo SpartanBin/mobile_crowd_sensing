@@ -30,6 +30,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         conv_params: Union[list, tuple],
         add_BN: bool,
         output_dim: Union[list, tuple],
+        linkm_params: Union[list, tuple],
         share_params: bool,
         action_dim: int,
         learning_rate: Union[float, int] = 3e-4,
@@ -69,6 +70,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.conv_params = conv_params
         self.add_BN = add_BN
         self.output_dim = output_dim
+        self.linkm_params = linkm_params
         self.share_params = share_params
         self.action_dim = action_dim
 
@@ -96,6 +98,8 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             conv_params=self.conv_params,
             add_BN=self.add_BN,
             output_dim=self.output_dim,
+            linkm_params=self.linkm_params,
+            link_matrix=torch.as_tensor(self.env.link_matrix, dtype=torch.float32, device=self.device),
             share_params=self.share_params,
             action_dim=self.action_dim,
             learning_rate=self.learning_rate,
@@ -300,7 +304,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
               test_episode_times: int, lowest_train_time_cost_to_test: Union[float, int]):
 
         self.init_learn()
-        self.random_policy_episodes_mean_time_cost = self.test(test_episode_times=100)
+        self.random_policy_episodes_mean_time_cost = 10000000000#self.test(test_episode_times=100)
         self.cur_state = self.random_policy_episodes_mean_time_cost
         self.best_state = {'episode_time_cost': self.random_policy_episodes_mean_time_cost,
                            'policy_params': self.policy.state_dict()}

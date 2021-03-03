@@ -18,8 +18,8 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     episode_duration = 3600 * 24 * 4
-    vehicle_num = 8
-    lowest_train_time_cost_to_test = 5000  # 2: 16500; 4: 11000; 6: 7000; 8: 5000; 10: 3600
+    vehicle_num = 2
+    lowest_train_time_cost_to_test = 16500  # 2: 16500; 4: 11000; 6: 7000; 8: 5500; 10: 3800
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'
@@ -46,13 +46,31 @@ if __name__ == '__main__':
             'dilation': 1,
         },
     ]
+    linkm_params = [
+        {
+            'in_channels': 1,
+            'out_channels': 32,
+            'kernel_size': (8, 8),
+            'stride': (4, 4),
+            'padding': (6, 6),
+            'dilation': (2, 2),
+        },
+        {
+            'in_channels': 32,
+            'out_channels': 64,
+            'kernel_size': (8, 8),
+            'stride': (4, 4),
+            'padding': (6, 6),
+            'dilation': (2, 2),
+        },
+    ]
     add_BN = True
     output_dim = [64, 32]
     share_params = False
     action_dim = 4
     learning_rate = 3e-4
     n_steps = 2048
-    batch_size = n_steps
+    batch_size = 128
     n_epochs = 10
     gamma = 0.99
     gae_lambda = 0.95
@@ -90,6 +108,7 @@ if __name__ == '__main__':
         conv_params=conv_params,
         add_BN=add_BN,
         output_dim=output_dim,
+        linkm_params=linkm_params,
         share_params=share_params,
         action_dim=action_dim,
         learning_rate=learning_rate,
