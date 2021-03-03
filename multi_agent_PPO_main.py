@@ -19,7 +19,7 @@ if __name__ == '__main__':
     action_interval = 180
     episode_duration = 3600 * 24 * 4
     vehicle_num = 2
-    lowest_train_time_cost_to_test = 16500  # 2: 16500; 4: 11000; 6: 7000; 8: 5500; 10: 3800
+    lowest_train_time_cost_to_test = 16500  # 2: 18000; 4: 12500; 6: 7500; 8: 6000; 10: 4200
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'
