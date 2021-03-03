@@ -382,16 +382,79 @@ same to experiment 6
 
 ### result
 
-| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
-| ---------------------- | ---------------- | ----------------- | ------------------------ |
-| 2                      |                  |                   |                          |
-| 4                      |                  |                   |                          |
-| 6                      |                  |                   |                          |
-| 8                      |                  |                   |                          |
-| 10                     |                  |                   |                          |
-| 12                     |                  |                   |                          |
-| 16                     |                  |                   |                          |
-| 20                     |                  |                   |                          |
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      | 15638     | 48627       | 8795                     |
+| 4                      | 11043     | 17712       | 6257                     |
+| 6                      | 6536      | 10647       | 3429                     |
+| 8                      | 5506      | 6489        | 2565                     |
+| 10                     | 3802      | 4923        | 1730                     |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+test_cost: the performance of well trained policy in test environment(the average of 100 episodes time cost).
+
+random_cost: the performance of random policy in test environment(the average of 100 episodes time cost).
+
+The shortest 100 episode: the shortest 100 episodes mean time cost(seconds), could represent the best performance of policy.
+
+
+
+### discussion
+
+All performance becomes weak. Try to input link information to avoid overfitting.
+
+
+
+## experiment 8
+
+
+
+### Environment
+
+same to experiment 7
+
+#### timestep
+
+same to experiment 7
+
+#### reward
+
+same to experiment 7
+
+#### state
+
+Use these as policy input.
+
+- Use link_matrix data of simulation environment.
+- Others are same to experiment 7
+
+#### action
+
+same to experiment 7
+
+
+
+### model
+
+- 2-dimensional convolutional network is added as the input layer to receive link_matrix data, and the output results are concatenated with output results of the 1-dimensional convolutional network and then input to the subsequent full-connection layer.
+- Others are same to experiment 7
+
+
+
+### result
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           |             |                          |
+| 4                      |           |             |                          |
+| 6                      |           |             |                          |
+| 8                      |           |             |                          |
+| 10                     |           |             |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
 
 
 
@@ -399,7 +462,7 @@ same to experiment 6
 
 
 
-## experiment 8
+## experiment 9
 
 
 
@@ -451,7 +514,7 @@ same to experiment 7
 
 
 
-## experiment 9: Genetic Algorithm
+## experiment 10: Genetic Algorithm
 
 
 
@@ -513,7 +576,10 @@ same to experiment 8
 - [x] Try greedy reward plus the mean of all greedy reward.
 - [x] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
-- [ ] Change format of input from matrix to array and try GA, RL(with greedy reward and greedy_mean reward).
+- [ ] Change format of input from matrix to array with greedy reward.
+- [ ] Try to use link matrix.
+- [ ] Try greedy_mean reward.
+- [ ] Try GA.
 - [ ] Try team_spirit reward.
 - [ ] Try more constant negative reward value.
 - [ ] Try distance weighted reward.
