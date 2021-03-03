@@ -135,10 +135,10 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 self.episode += 1
                 self.the_last_100_episodes_time_cost.append(self.episode_time_cost)
                 self.the_shortest_100_episodes_time_cost.append(self.episode_time_cost)
-                last_100_episodes_mean_time_cost = np.mean(self.the_last_100_episodes_time_cost)
+                self.last_100_episodes_mean_time_cost = np.mean(self.the_last_100_episodes_time_cost)
                 if len(self.the_last_100_episodes_time_cost) > 100:
-                    if last_100_episodes_mean_time_cost < self.the_best_last_100_episodes_mean_time_cost:
-                        self.the_best_last_100_episodes_mean_time_cost = last_100_episodes_mean_time_cost
+                    if self.last_100_episodes_mean_time_cost < self.the_best_last_100_episodes_mean_time_cost:
+                        self.the_best_last_100_episodes_mean_time_cost = self.last_100_episodes_mean_time_cost
                     self.the_last_100_episodes_time_cost.pop(0)
                     self.the_shortest_100_episodes_time_cost.sort()
                     self.the_shortest_100_episodes_time_cost.pop()
@@ -159,7 +159,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     self.episode_time_cost, self.select_action_time,
                     np.mean(self.the_shortest_100_episodes_time_cost),
                     self.random_policy_episodes_mean_time_cost,
-                    last_100_episodes_mean_time_cost,
+                    self.last_100_episodes_mean_time_cost,
                     self.the_best_last_100_episodes_mean_time_cost
                 ))
                 self.episode_time_cost = 0
@@ -310,7 +310,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.best_train_session = train_session
         while self.num_timesteps < total_timesteps:
             self.collect_rollouts()
-            if self.the_best_last_100_episodes_mean_time_cost <= lowest_train_time_cost_to_test:
+            if self.last_100_episodes_mean_time_cost <= lowest_train_time_cost_to_test:
                 self.cur_state = self.test(test_episode_times=test_episode_times)
                 print('''
                 **********************************************************************************************
@@ -345,7 +345,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 '''.format(
                     self.episode, train_session, self.cur_state, self.best_state['episode_time_cost'],
                     self.best_episode, self.best_train_session))
-                if self.best_state['episode_time_cost'] <= self.cur_state / 10:
+                if self.best_state['episode_time_cost'] <= self.cur_state / 2:
                     break
 
         self.best_state['best_episode'] = self.best_episode

@@ -104,6 +104,7 @@ class multi_agent():
         self.episode_time_cost = 0
         self.episode = 0
         self.the_last_100_episodes_time_cost = []
+        self.last_100_episodes_mean_time_cost = np.inf
         self.the_best_last_100_episodes_mean_time_cost = np.inf
         self.the_shortest_100_episodes_time_cost = []
         self.random_policy_episodes_mean_time_cost = None
