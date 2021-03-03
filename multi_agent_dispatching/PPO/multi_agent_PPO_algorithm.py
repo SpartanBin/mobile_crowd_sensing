@@ -304,7 +304,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
               test_episode_times: int, lowest_train_time_cost_to_test: Union[float, int]):
 
         self.init_learn()
-        self.random_policy_episodes_mean_time_cost = 10000000000#self.test(test_episode_times=100)
+        self.random_policy_episodes_mean_time_cost = 3000000000000  # self.test(test_episode_times=100)
         self.cur_state = self.random_policy_episodes_mean_time_cost
         self.best_state = {'episode_time_cost': self.random_policy_episodes_mean_time_cost,
                            'policy_params': self.policy.state_dict()}
