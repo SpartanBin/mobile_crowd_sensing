@@ -19,7 +19,7 @@ if __name__ == '__main__':
     action_interval = 180
     episode_duration = 3600 * 24 * 4
     vehicle_num = 2
-    lowest_train_time_cost_to_test = 16500  # 2: 18000; 4: 12500; 6: 7500; 8: 6000; 10: 4200
+    lowest_train_time_cost_to_test = 18000  # 2: 18000; 4: 12500; 6: 7500; 8: 6000; 10: 4200
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'
@@ -37,31 +37,33 @@ if __name__ == '__main__':
             'padding': 2,
             'dilation': 1,
         },
+    ]
+    linkm_params = [
         {
-            'in_channels': 64,
+            'in_channels': 1,
+            'out_channels': 10,
+            'kernel_size': (8, 8),
+            'stride': (4, 4),
+            'padding': (6, 6),
+            'dilation': (2, 2),
+        },
+        {
+            'in_channels': 10,
+            'out_channels': 20,
+            'kernel_size': (8, 8),
+            'stride': (4, 4),
+            'padding': (6, 6),
+            'dilation': (2, 2),
+        },
+    ]
+    conv_params2 = [
+        {
+            'in_channels': 84,
             'out_channels': 128,
             'kernel_size': 3,
             'stride': 2,
             'padding': 2,
             'dilation': 1,
-        },
-    ]
-    linkm_params = [
-        {
-            'in_channels': 1,
-            'out_channels': 32,
-            'kernel_size': (8, 8),
-            'stride': (4, 4),
-            'padding': (6, 6),
-            'dilation': (2, 2),
-        },
-        {
-            'in_channels': 32,
-            'out_channels': 64,
-            'kernel_size': (8, 8),
-            'stride': (4, 4),
-            'padding': (6, 6),
-            'dilation': (2, 2),
         },
     ]
     add_BN = True
@@ -70,7 +72,7 @@ if __name__ == '__main__':
     action_dim = 4
     learning_rate = 3e-4
     n_steps = 2048
-    batch_size = 128
+    batch_size = 256
     n_epochs = 10
     gamma = 0.99
     gae_lambda = 0.95
@@ -109,6 +111,7 @@ if __name__ == '__main__':
         add_BN=add_BN,
         output_dim=output_dim,
         linkm_params=linkm_params,
+        conv_params2=conv_params2,
         share_params=share_params,
         action_dim=action_dim,
         learning_rate=learning_rate,

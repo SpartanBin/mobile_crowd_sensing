@@ -445,16 +445,50 @@ same to experiment 7
 
 ### result
 
-| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
-| ---------------------- | --------- | ----------- | ------------------------ |
-| 2                      |           |             |                          |
-| 4                      |           |             |                          |
-| 6                      |           |             |                          |
-| 8                      |           |             |                          |
-| 10                     |           |             |                          |
-| 12                     |           |             |                          |
-| 16                     |           |             |                          |
-| 20                     |           |             |                          |
+Model cannot converge.
+
+
+
+### discussion
+
+Try input conv2d result to conv1d.
+
+
+
+## experiment 9
+
+
+
+### Environment
+
+same to experiment 8
+
+#### timestep
+
+same to experiment 8
+
+#### reward
+
+same to experiment 8
+
+#### state
+
+same to experiment 8
+
+#### action
+
+same to experiment 8
+
+
+
+### model
+
+- 2-dimensional convolutional network is added as the input layer to receive link_matrix data, and the output results input to 1-dimensional convolutional network.
+- Others are same to experiment 8
+
+
+
+### result
 
 
 
@@ -462,7 +496,7 @@ same to experiment 7
 
 
 
-## experiment 9
+## experiment 10
 
 
 
@@ -514,7 +548,7 @@ same to experiment 7
 
 
 
-## experiment 10: Genetic Algorithm
+## experiment 11: Genetic Algorithm
 
 
 

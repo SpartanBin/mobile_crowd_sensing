@@ -31,6 +31,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         add_BN: bool,
         output_dim: Union[list, tuple],
         linkm_params: Union[list, tuple],
+        conv_params2: Union[list, tuple],
         share_params: bool,
         action_dim: int,
         learning_rate: Union[float, int] = 3e-4,
@@ -71,6 +72,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.add_BN = add_BN
         self.output_dim = output_dim
         self.linkm_params = linkm_params
+        self.conv_params2 = conv_params2
         self.share_params = share_params
         self.action_dim = action_dim
 
@@ -99,6 +101,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             add_BN=self.add_BN,
             output_dim=self.output_dim,
             linkm_params=self.linkm_params,
+            conv_params2=self.conv_params2,
             link_matrix=torch.as_tensor(self.env.link_matrix, dtype=torch.float32, device=self.device),
             share_params=self.share_params,
             action_dim=self.action_dim,

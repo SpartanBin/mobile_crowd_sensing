@@ -66,8 +66,8 @@ class Conv1dExtractor(nn.Module):
 
 class linkmatrixExtractor(nn.Module):
 
-    def __init__(self, conv_params: list, add_BN: bool, output_dim: list,
-                 linkm_params: list, link_matrix: torch.Tensor, share_params: bool):
+    def __init__(self, conv_params: list, linkm_params: list, linkl_dim: list, conv_params2: list, add_BN: bool,
+                 output_dim: list, link_matrix: torch.Tensor, share_params: bool):
         '''
         :param conv_params: type of item in iteration must be dict object, and dict keys are Conv layer
         param names, key values are allowed param values
@@ -106,6 +106,23 @@ class linkmatrixExtractor(nn.Module):
         self.policy_linkm_net = nn.Sequential(*policy_linkm_net)
         self.value_linkm_net = nn.Sequential(*value_linkm_net)
 
+        self.policy_linkl_net = nn.Sequential(nn.Linear(linkl_dim[0], linkl_dim[1]))
+        self.value_linkl_net = nn.Sequential(nn.Linear(linkl_dim[0], linkl_dim[1]))
+
+        policy_conv_net2 = []
+        value_conv_net2 = []
+        for layer_params in conv_params2:
+            policy_conv_net2.append(nn.Conv1d(**layer_params))
+            if add_BN:
+                policy_conv_net2.append(nn.BatchNorm1d(layer_params['out_channels']))
+            policy_conv_net2.append(nn.ELU())
+            value_conv_net2.append(nn.Conv1d(**layer_params))
+            if add_BN:
+                value_conv_net2.append(nn.BatchNorm1d(layer_params['out_channels']))
+            value_conv_net2.append(nn.ELU())
+        self.policy_conv_net2 = nn.Sequential(*policy_conv_net2)
+        self.value_conv_net2 = nn.Sequential(*value_conv_net2)
+
         policy_output_net = []
         value_output_net = []
         for i in range(len(output_dim)):
@@ -122,6 +139,8 @@ class linkmatrixExtractor(nn.Module):
         if self.share_params:
             del self.value_conv_net
             del self.value_linkm_net
+            del self.value_linkl_net
+            del self.value_conv_net2
             del self.value_output_net
 
     def forward(self, features: torch.Tensor):
@@ -130,16 +149,20 @@ class linkmatrixExtractor(nn.Module):
             If all layers are shared, then ``latent_policy == latent_value``
         """
 
-        conv_output = self.policy_conv_net(features).flatten(start_dim=1, end_dim=-1)
+        conv_output = self.policy_conv_net(features)
         link_matrix = self.link_matrix.repeat((features.size()[0],) + (1, 1, 1))
-        linkm_output = self.policy_linkm_net(link_matrix).flatten(start_dim=1, end_dim=-1)
-        policy_input = torch.cat((conv_output, linkm_output), dim=1)
+        linkm_output = self.policy_linkm_net(link_matrix).flatten(start_dim=2, end_dim=-1)
+        linkl_output = self.policy_linkl_net(linkm_output)
+        conv_input2 = torch.cat((conv_output, linkl_output), dim=1)
+        policy_input = self.policy_conv_net2(conv_input2).flatten(start_dim=1, end_dim=-1)
         policy_output = self.policy_output_net(policy_input)
         value_output = None
         if not self.share_params:
-            conv_output = self.value_conv_net(features).flatten(start_dim=1, end_dim=-1)
-            linkm_output = self.value_linkm_net(link_matrix).flatten(start_dim=1, end_dim=-1)
-            value_input = torch.cat((conv_output, linkm_output), dim=1)
+            conv_output = self.value_conv_net(features)
+            linkm_output = self.value_linkm_net(link_matrix).flatten(start_dim=2, end_dim=-1)
+            linkl_output = self.value_linkl_net(linkm_output)
+            conv_input2 = torch.cat((conv_output, linkl_output), dim=1)
+            value_input = self.value_conv_net2(conv_input2).flatten(start_dim=1, end_dim=-1)
             value_output = self.value_output_net(value_input)
         return policy_output, value_output
 
@@ -215,6 +238,8 @@ class ActorCriticPolicy(nn.Module):
         add_BN: bool,
         output_dim: list,
         linkm_params,
+        linkl_dim,
+        conv_params2,
         link_matrix,
         share_params: bool,
         action_dim: int,
@@ -240,6 +265,8 @@ class ActorCriticPolicy(nn.Module):
             add_BN=add_BN,
             output_dim=output_dim,
             linkm_params=linkm_params,
+            linkl_dim=linkl_dim,
+            conv_params2=conv_params2,
             link_matrix=link_matrix,
             share_params=share_params,
         )
@@ -321,6 +348,7 @@ class multi_agent_ACP():
             add_BN: bool,
             output_dim: list,
             linkm_params,
+            conv_params2,
             link_matrix,
             share_params: bool,
             action_dim: int,
@@ -358,7 +386,6 @@ class multi_agent_ACP():
                 dilation=params['dilation'],
                 stride=params['stride'],
             )
-        conv_param = conv_params[-1]
 
         linkm_output_shape = (weight_shape, weight_shape)
         for params in linkm_params:
@@ -372,14 +399,27 @@ class multi_agent_ACP():
                 dilation=params['dilation'],
                 stride=params['stride'],
             )
-        linkm_param = linkm_params[-1]
+
+        linkl_dim = [linkm_output_shape[0] * linkm_output_shape[1], conv_output_shape]
+
+        conv_output2_shape = conv_output_shape
+        for params in conv_params2:
+            assert 'padding' in params, "must set 'padding'"
+            assert 'dilation' in params, "must set 'dilation'"
+            assert 'stride' in params, "must set 'stride'"
+            conv_output2_shape = self.cal_conv_output_shape(
+                input_shape=conv_output2_shape,
+                kernel_size=params['kernel_size'],
+                padding=params['padding'],
+                dilation=params['dilation'],
+                stride=params['stride'],
+            )
+        conv_param2 = conv_params2[-1]
 
         if type(conv_output_shape) == tuple:
-            output_dim = [conv_output_shape[0] * conv_output_shape[1] * conv_param['out_channels'] +
-                          linkm_output_shape[0] * linkm_output_shape[1] * linkm_param['out_channels']] + output_dim
+            output_dim = [conv_output2_shape[0] * conv_output2_shape[1] * conv_param2['out_channels']] + output_dim
         else:
-            output_dim = [conv_output_shape * conv_param['out_channels'] +
-                          linkm_output_shape[0] * linkm_output_shape[1] * linkm_param['out_channels']] + output_dim
+            output_dim = [conv_output2_shape * conv_param2['out_channels']] + output_dim
 
         self.ACP = {}
         for i in range(vehicle_num):
@@ -390,6 +430,8 @@ class multi_agent_ACP():
                     add_BN=add_BN,
                     output_dim=output_dim,
                     linkm_params=linkm_params,
+                    linkl_dim=linkl_dim,
+                    conv_params2=conv_params2,
                     link_matrix=link_matrix,
                     share_params=share_params,
                     action_dim=action_dim,
@@ -405,6 +447,8 @@ class multi_agent_ACP():
                         add_BN=add_BN,
                         output_dim=output_dim,
                         linkm_params=linkm_params,
+                        linkl_dim=linkl_dim,
+                        conv_params2=conv_params2,
                         link_matrix=link_matrix,
                         share_params=share_params,
                         action_dim=action_dim,
