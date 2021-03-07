@@ -22,7 +22,7 @@ if __name__ == '__main__':
     lowest_train_time_cost_to_test = 18000  # 2: 18000; 4: 12500; 6: 7500; 8: 6000; 10: 4200
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
-    reward_type = 'greedy'
+    reward_type = 'greedy_mean'
     cooperative_weight = 0.5
     negative_constant_reward = -0.05
     weight_shape = height * width
@@ -52,7 +52,7 @@ if __name__ == '__main__':
     action_dim = 4
     learning_rate = 3e-4
     n_steps = 2048
-    batch_size = 512
+    batch_size = n_steps
     n_epochs = 10
     gamma = 0.99
     gae_lambda = 0.95
