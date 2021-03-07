@@ -284,7 +284,14 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             episodes_time_cost.append(episode_time_cost)
         return np.min(episodes_time_cost)
 
+    def result(self):
+        return self.genome.view_best(self.bound)
+
     def genetic(self, num_gen):
+
+        cur_state = 3000000000000000000000000000
+        best_state = cur_state
+        best_generation = None
 
         for e in range(num_gen):
             self.genome.select(self.fitness_array)
@@ -299,8 +306,6 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             if len(self.the_last_100_episodes_time_cost) > 100 / self.num_episodes_to_cal:
                 if last_100_episodes_mean_time_cost < self.the_best_last_100_episodes_mean_time_cost:
                     self.the_best_last_100_episodes_mean_time_cost = last_100_episodes_mean_time_cost
-                if self.the_first_100_episodes_mean_time_cost is None:
-                    self.the_first_100_episodes_mean_time_cost = last_100_episodes_mean_time_cost
                 self.the_last_100_episodes_time_cost.pop(0)
                 self.the_shortest_100_episodes_time_cost.sort()
                 self.the_shortest_100_episodes_time_cost.pop()
@@ -309,7 +314,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             in these {} episodes, the number of vehicle is {}, 
             time_mean_{}_episodes_time_cost = {}, 
             the_shortest_100_episodes_mean_time_cost = {}, 
-            the_first_100_episodes_mean_time_cost = {}, 
+            random_policy_episodes_mean_time_cost = {}, 
             the_last_100_episodes_mean_time_cost = {}, 
             the_best_last_100_episodes_mean_time_cost = {}
             ******************************************************************************************************
@@ -317,7 +322,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
                 self.num_episodes_to_cal, self.vehicle_num,
                 self.num_episodes_to_cal, episode_time_cost,
                 np.mean(self.the_shortest_100_episodes_time_cost),
-                self.the_first_100_episodes_mean_time_cost,
+                self.random_policy_episodes_mean_time_cost,
                 last_100_episodes_mean_time_cost,
                 self.the_best_last_100_episodes_mean_time_cost
             ))
@@ -325,6 +330,22 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             if cur_best_fitness > self.best_fitness:
                 self.replace()
                 self.update_records()
-
-    def result(self):
-        return self.genome.view_best(self.bound)
+                new_obs = self.env.reset()
+                _, cur_state = self.calculate_fitness(
+                    chrom=self.result(),
+                    multi_agent_params=self.multi_agent_params,
+                    env=copy.deepcopy(self.env),
+                    new_obs=copy.deepcopy(new_obs),
+                    num_episodes_to_cal=100,
+                )
+                if cur_state < best_state:
+                    best_state = cur_state
+                    best_generation = e + 1
+                print('''
+                **********************************************************************************************
+                low train time cost trigger this test: 
+                now have been {}th generation, current test episode_time_cost = {}; 
+                best test episode_time_cost = {}, the {}th generation result is best
+                **********************************************************************************************
+                '''.format(
+                    e + 1, cur_state, best_state, best_generation))

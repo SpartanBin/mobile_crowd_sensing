@@ -18,7 +18,7 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     episode_duration = 3600 * 24 * 4
-    vehicle_num = 4
+    vehicle_num = 2
 
     weight_shape = height * width
     share_policy = True
