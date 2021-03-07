@@ -2,6 +2,7 @@ import sys
 import os
 from typing import Optional
 import copy
+import pickle
 
 import numpy as np
 import torch
@@ -330,22 +331,30 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             if cur_best_fitness > self.best_fitness:
                 self.replace()
                 self.update_records()
-                new_obs = self.env.reset()
+
+            if e % 10 == 0:
+                with open('genome_v{}.pickle'.format(self.vehicle_num), 'wb') as file:
+                    pickle.dump(self.genome, file)
+                env = copy.deepcopy(self.env)
+                new_obs = env.reset()
+
                 _, cur_state = self.calculate_fitness(
                     chrom=self.result(),
                     multi_agent_params=self.multi_agent_params,
-                    env=copy.deepcopy(self.env),
-                    new_obs=copy.deepcopy(new_obs),
+                    env=env,
+                    new_obs=new_obs,
                     num_episodes_to_cal=100,
                 )
+
                 if cur_state < best_state:
                     best_state = cur_state
                     best_generation = e + 1
                 print('''
-                **********************************************************************************************
-                low train time cost trigger this test: 
+                **------------------------------------------------------------------------------------------**
+                **------------------------------------------------------------------------------------------**
                 now have been {}th generation, current test episode_time_cost = {}; 
                 best test episode_time_cost = {}, the {}th generation result is best
-                **********************************************************************************************
+                **------------------------------------------------------------------------------------------**
+                **------------------------------------------------------------------------------------------**
                 '''.format(
                     e + 1, cur_state, best_state, best_generation))
