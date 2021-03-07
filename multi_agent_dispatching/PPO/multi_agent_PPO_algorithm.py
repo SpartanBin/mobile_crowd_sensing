@@ -108,6 +108,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         be used with the concept of rollout used in model-based RL or planning.
         """
         assert self._last_obs is not None, "No previous observation was provided"
+        need_test = False
         timestep = 0
         done = False
         self.rollout_buffer.reset()
@@ -139,6 +140,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 if len(self.the_last_100_episodes_time_cost) > 100:
                     if self.last_100_episodes_mean_time_cost < self.the_best_last_100_episodes_mean_time_cost:
                         self.the_best_last_100_episodes_mean_time_cost = self.last_100_episodes_mean_time_cost
+                        need_test = True
                     self.the_last_100_episodes_time_cost.pop(0)
                     self.the_shortest_100_episodes_time_cost.sort()
                     self.the_shortest_100_episodes_time_cost.pop()
@@ -186,6 +188,8 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         values = values.cpu().numpy()
 
         self.rollout_buffer.compute_returns_and_advantage(last_values=values, done=done)
+
+        return need_test
 
     def train(self) -> None:
         """
@@ -300,7 +304,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
         self.init_learn()
         self.random_policy_episodes_mean_time_cost = self.test(test_episode_times=100)
-        self.the_best_last_100_episodes_mean_time_cost = self.random_policy_episodes_mean_time_cost
         self.cur_state = self.random_policy_episodes_mean_time_cost
         self.best_state = {'episode_time_cost': self.random_policy_episodes_mean_time_cost,
                            'policy_params': self.policy.state_dict()}
@@ -310,8 +313,8 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         test_session = 0
         self.best_train_session = train_session
         while self.num_timesteps < total_timesteps:
-            self.collect_rollouts()
-            if self.last_100_episodes_mean_time_cost <= self.the_best_last_100_episodes_mean_time_cost:
+            need_test = self.collect_rollouts()
+            if need_test:
                 test_session += 1
                 self.cur_state = self.test(test_episode_times=test_episode_times)
                 if self.cur_state < self.best_state['episode_time_cost']:
@@ -320,11 +323,13 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     self.best_episode = self.episode
                     self.best_train_session = train_session
                 print('''
-                **********************************************************************************************
+                **------------------------------------------------------------------------------------------**
+                **------------------------------------------------------------------------------------------**
                 {}th test: 
                 now have been {}th episode, {}th training, current test episode_time_cost = {}; 
                 best test episode_time_cost = {}, the result of {}th episode, {}th training is best
-                **********************************************************************************************
+                **------------------------------------------------------------------------------------------**
+                **------------------------------------------------------------------------------------------**
                 '''.format(
                     test_session, self.episode, train_session, self.cur_state, self.best_state['episode_time_cost'],
                     self.best_episode, self.best_train_session))
