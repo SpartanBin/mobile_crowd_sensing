@@ -300,6 +300,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
         self.init_learn()
         self.random_policy_episodes_mean_time_cost = self.test(test_episode_times=100)
+        self.the_best_last_100_episodes_mean_time_cost = self.random_policy_episodes_mean_time_cost
         self.cur_state = self.random_policy_episodes_mean_time_cost
         self.best_state = {'episode_time_cost': self.random_policy_episodes_mean_time_cost,
                            'policy_params': self.policy.state_dict()}
@@ -310,8 +311,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.best_train_session = train_session
         while self.num_timesteps < total_timesteps:
             self.collect_rollouts()
-            if (self.last_100_episodes_mean_time_cost < self.random_policy_episodes_mean_time_cost) and \
-                    (self.last_100_episodes_mean_time_cost <= self.the_best_last_100_episodes_mean_time_cost):
+            if self.last_100_episodes_mean_time_cost <= self.the_best_last_100_episodes_mean_time_cost:
                 test_session += 1
                 self.cur_state = self.test(test_episode_times=test_episode_times)
                 if self.cur_state < self.best_state['episode_time_cost']:
