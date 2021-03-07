@@ -19,7 +19,6 @@ if __name__ == '__main__':
     action_interval = 180
     episode_duration = 3600 * 24 * 4
     vehicle_num = 2
-    lowest_train_time_cost_to_test = 18000  # 2: 18000; 4: 12500; 6: 7500; 8: 6000; 10: 4200
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy_mean'
@@ -109,7 +108,5 @@ if __name__ == '__main__':
     )
     model.learn(
         total_timesteps=1000000,
-        test_every_train_sessions=10,
         test_episode_times=100,
-        lowest_train_time_cost_to_test=lowest_train_time_cost_to_test,
     )
