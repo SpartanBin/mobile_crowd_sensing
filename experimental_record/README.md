@@ -490,9 +490,17 @@ same to experiment 8
 
 ### result
 
+| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
+| ---------------------- | ---------------- | ----------------- | ------------------------ |
+| 2                      | 20688            | -                 | 11619                    |
+| 4                      | 13928            | -                 | 7636                     |
+| 6                      | 8047             | -                 | 4419                     |
+
 
 
 ### discussion
+
+The result is still not as good as experiment 7. Give up adding link information temporarily.
 
 
 
@@ -510,7 +518,7 @@ same to experiment 7
 
 #### reward
 
-- Try 'greedy_mean' reward which cooperative_weight is 0.5.
+- Try 'greedy_mean' reward which cooperative_weight is 0.5 and 1.5.
 - Others are same to experiment 7.
 
 #### state
@@ -531,16 +539,31 @@ same to experiment 7
 
 ### result
 
-| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
-| ---------------------- | ---------------- | ----------------- | ------------------------ |
-| 2                      |                  |                   |                          |
-| 4                      |                  |                   |                          |
-| 6                      |                  |                   |                          |
-| 8                      |                  |                   |                          |
-| 10                     |                  |                   |                          |
-| 12                     |                  |                   |                          |
-| 16                     |                  |                   |                          |
-| 20                     |                  |                   |                          |
+result with 0.5 weight
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           |             |                          |
+| 4                      |           |             |                          |
+| 6                      |           |             |                          |
+| 8                      |           |             |                          |
+| 10                     |           |             |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+result with 1.5 weight
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           |             |                          |
+| 4                      |           |             |                          |
+| 6                      |           |             |                          |
+| 8                      |           |             |                          |
+| 10                     |           |             |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
 
 
 
@@ -554,11 +577,11 @@ same to experiment 7
 
 ### Environment
 
-same to experiment 8
+same to experiment 7
 
 #### timestep
 
-same to experiment 8
+same to experiment 7
 
 #### optimization objective
 
@@ -566,33 +589,33 @@ Maximize (1 / episode_duration).
 
 #### state
 
-same to experiment 8
+same to experiment 7
 
 #### action
 
-same to experiment 8
+same to experiment 7
 
 
 
 ### model
 
-- The deep learning part is the same as experiment 8.
+- The deep learning part is the same as experiment 7.
 - Optimization method change to Genetic Algorithm(GA) with roulette wheel selection, binary coded genome and fitness who is the inverse of episode duration.
 
 
 
 ### result
 
-| the number of vehicles | last 100 episode | first 100 episode | the shortest 100 episode |
-| ---------------------- | ---------------- | ----------------- | ------------------------ |
-| 2                      |                  |                   |                          |
-| 4                      |                  |                   |                          |
-| 6                      |                  |                   |                          |
-| 8                      |                  |                   |                          |
-| 10                     |                  |                   |                          |
-| 12                     |                  |                   |                          |
-| 16                     |                  |                   |                          |
-| 20                     |                  |                   |                          |
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           |             |                          |
+| 4                      |           |             |                          |
+| 6                      |           |             |                          |
+| 8                      |           |             |                          |
+| 10                     |           |             |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
 
 
 
@@ -610,7 +633,7 @@ same to experiment 8
 - [x] Try greedy reward plus the mean of all greedy reward.
 - [x] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
-- [ ] Change format of input from matrix to array with greedy reward.
+- [x] Change format of input from matrix to array with greedy reward.
 - [ ] Try to use link matrix.
 - [ ] Try greedy_mean reward.
 - [ ] Try GA.
