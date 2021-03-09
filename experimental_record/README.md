@@ -504,7 +504,7 @@ The result is still not as good as experiment 7. Give up adding link information
 
 
 
-## experiment 10
+## experiment 10: greedy_mean
 
 
 
@@ -543,11 +543,11 @@ result with 0.5 weight
 
 | the number of vehicles | test_cost | random_cost | the shortest 100 episode |
 | ---------------------- | --------- | ----------- | ------------------------ |
-| 2                      |           |             |                          |
-| 4                      |           |             |                          |
-| 6                      |           |             |                          |
-| 8                      |           |             |                          |
-| 10                     |           |             |                          |
+| 2                      | 15757     | 48627       | 8089                     |
+| 4                      | 9247      | 17712       | 5380                     |
+| 6                      | 6710      | 10647       | 3494                     |
+| 8                      | 5528      | 6489        | 2603                     |
+| 10                     | 4221      | 4923        | 2036                     |
 | 12                     |           |             |                          |
 | 16                     |           |             |                          |
 | 20                     |           |             |                          |
@@ -556,11 +556,11 @@ result with 1.5 weight
 
 | the number of vehicles | test_cost | random_cost | the shortest 100 episode |
 | ---------------------- | --------- | ----------- | ------------------------ |
-| 2                      |           |             |                          |
-| 4                      |           |             |                          |
-| 6                      |           |             |                          |
-| 8                      |           |             |                          |
-| 10                     |           |             |                          |
+| 2                      | 14994     | 48627       | 9038                     |
+| 4                      | 13831     | 17712       | 7740                     |
+| 6                      | 7150      | 10647       | 3773                     |
+| 8                      | 5666      | 6489        | 2819                     |
+| 10                     | 4001      | 4923        | 1831                     |
 | 12                     |           |             |                          |
 | 16                     |           |             |                          |
 | 20                     |           |             |                          |
@@ -568,6 +568,9 @@ result with 1.5 weight
 
 
 ### discussion
+
+- The results of 'greedy_mean' reward are not stable.
+- Additional found: using 512 batch_size leads to poorer performance than 2048 batch_size. It seems that increasing the quantity can lead to better performance.
 
 
 
@@ -623,6 +626,86 @@ same to experiment 7
 
 
 
+## experiment 12: team_spirit
+
+
+
+### Environment
+
+same to experiment 7
+
+#### timestep
+
+same to experiment 7
+
+#### reward
+
+- Try 'team_spirit' reward which cooperative_weight is 0.5 and 1.
+- Others are same to experiment 7.
+
+#### state
+
+same to experiment 7
+
+#### action
+
+same to experiment 7
+
+
+
+### model
+
+same to experiment 7
+
+
+
+### result
+
+result with 0 weight(tantamount to greed reward)
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      | 15638     | 48627       | 8795                     |
+| 4                      | 11043     | 17712       | 6257                     |
+| 6                      | 6536      | 10647       | 3429                     |
+| 8                      | 5506      | 6489        | 2565                     |
+| 10                     | 3802      | 4923        | 1730                     |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+result with 0.5 weight
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           |             |                          |
+| 4                      |           |             |                          |
+| 6                      |           |             |                          |
+| 8                      |           |             |                          |
+| 10                     |           |             |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+result with 1 weight
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           |             |                          |
+| 4                      |           |             |                          |
+| 6                      |           |             |                          |
+| 8                      |           |             |                          |
+| 10                     |           |             |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+
+
+### discussion
+
+
+
 ## TODO
 
 - [x] Check environment code logic.
@@ -634,8 +717,8 @@ same to experiment 7
 - [x] Try greedy reward plus the weighted mean of all greedy reward.
 - [ ] ~~Try genetic algorithm(if work, then try imitation learning to learn genetic policy).~~
 - [x] Change format of input from matrix to array with greedy reward.
-- [ ] Try to use link matrix.
-- [ ] Try greedy_mean reward.
+- [x] Try to use link matrix.
+- [x] Try greedy_mean reward.
 - [ ] Try GA.
 - [ ] Try team_spirit reward.
 - [ ] Try more constant negative reward value.
