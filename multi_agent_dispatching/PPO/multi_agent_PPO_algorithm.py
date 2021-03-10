@@ -336,7 +336,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             self.train()
             train_session += 1
             print('training successful in {}th training session'.format(train_session))
-            if self.the_best_last_100_episodes_mean_time_cost <= self.last_100_episodes_mean_time_cost / 2:
+            if self.the_best_last_100_episodes_mean_time_cost <= self.last_100_episodes_mean_time_cost / 10:
                 break
 
         self.best_state['best_episode'] = self.best_episode
