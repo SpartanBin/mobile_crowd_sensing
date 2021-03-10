@@ -300,6 +300,14 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             new_obs = env.reset()
         return np.mean(episode_time_costs)
 
+    def save(self):
+        self.best_state['best_episode'] = self.best_episode
+        self.best_state['best_train_session'] = self.best_train_session
+        self.best_state['random_policy_episodes_mean_time_cost'] = self.random_policy_episodes_mean_time_cost
+        self.best_state['the_shortest_100_episodes_mean_time_cost'] = np.mean(self.the_shortest_100_episodes_time_cost)
+        with open('PPO_state_vehicle{}.pickle'.format(self.vehicle_num), 'wb') as file:
+            pickle.dump(self.best_state, file)
+
     def learn(self, total_timesteps: int, test_episode_times: int):
 
         self.init_learn()
@@ -333,15 +341,11 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 '''.format(
                     test_session, self.episode, train_session, self.cur_state, self.best_state['episode_time_cost'],
                     self.best_episode, self.best_train_session))
+                self.save()
             self.train()
             train_session += 1
             print('training successful in {}th training session'.format(train_session))
             if self.the_best_last_100_episodes_mean_time_cost <= self.last_100_episodes_mean_time_cost / 10:
                 break
 
-        self.best_state['best_episode'] = self.best_episode
-        self.best_state['best_train_session'] = self.best_train_session
-        self.best_state['random_policy_episodes_mean_time_cost'] = self.random_policy_episodes_mean_time_cost
-        self.best_state['the_shortest_100_episodes_mean_time_cost'] = np.mean(self.the_shortest_100_episodes_time_cost)
-        with open('PPO_state_vehicle{}.pickle'.format(self.vehicle_num), 'wb') as file:
-            pickle.dump(self.best_state, file)
+        self.save()
