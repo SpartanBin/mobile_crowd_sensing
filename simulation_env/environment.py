@@ -283,9 +283,9 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         #################################################################
         # calculate distance reward coefficient
         if reward_type == 'distance':
-            all_distance_reward_coef = all_distance_reward_coef / (self.height ** 2 + self.width ** 2) ** 0.5
-            all_distance_reward_coef = np.tanh(all_distance_reward_coef)
-            all_distance_reward_coef[(range(self.vehicle_num), range(self.vehicle_num))] = 1
+            all_distance_reward_coef = all_distance_reward_coef / ((self.height ** 2 + self.width ** 2) ** 0.5)
+            all_distance_reward_coef = np.tanh(all_distance_reward_coef) * cooperative_weight
+            all_distance_reward_coef[(range(self.vehicle_num), range(self.vehicle_num))] = 1 - cooperative_weight
         #################################################################
 
         for key in first_passed_node_vehicle.keys():

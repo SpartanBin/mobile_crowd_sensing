@@ -704,6 +704,75 @@ result with 1 weight
 
 ### discussion
 
+The results of 'team_spirit' reward are not stable.
+
+
+
+## experiment 13: distance_weighted_reward
+
+
+
+### Environment
+
+same to experiment 12
+
+#### timestep
+
+same to experiment 12
+
+#### reward
+
+- Try 'distance_weighted_reward' reward which cooperative_weight is 0.5 and 1. distance_weighted_reward = vehicle's own greedy reward * (1 - cooperative_weight) + sum(tanh(other vehicle's greedy reward * distance_weighted * cooperative_weight)). distance_weighted = the distance between vehicle and other vehicle / max node distance. See [environment.py](../simulation_env/environment.py) for more details.
+- Others are same to experiment 12.
+
+#### state
+
+same to experiment 12
+
+#### action
+
+same to experiment 12
+
+
+
+### model
+
+same to experiment 12
+
+
+
+### result
+
+result with 0 weight(tantamount to greed reward)
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      | 15638     | 48627       | 8795                     |
+| 4                      | 11043     | 17712       | 6257                     |
+| 6                      | 6536      | 10647       | 3429                     |
+| 8                      | 5506      | 6489        | 2565                     |
+| 10                     | 3802      | 4923        | 1730                     |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+result with (1 / (vehicle_number * 1.5)) weight
+
+| the number of vehicles | test_cost | random_cost | the shortest 100 episode |
+| ---------------------- | --------- | ----------- | ------------------------ |
+| 2                      |           | 48627       |                          |
+| 4                      |           | 17712       |                          |
+| 6                      |           | 10647       |                          |
+| 8                      |           | 6489        |                          |
+| 10                     |           | 4923        |                          |
+| 12                     |           |             |                          |
+| 16                     |           |             |                          |
+| 20                     |           |             |                          |
+
+
+
+### discussion
+
 
 
 ## TODO
@@ -720,6 +789,6 @@ result with 1 weight
 - [x] Try to use link matrix.
 - [x] Try greedy_mean reward.
 - [ ] Try GA.
-- [ ] Try team_spirit reward.
-- [ ] Try more constant negative reward value.
+- [x] Try team_spirit reward.
 - [ ] Try distance weighted reward.
+- [ ] Try more constant negative reward value.

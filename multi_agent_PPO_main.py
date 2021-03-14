@@ -21,8 +21,8 @@ if __name__ == '__main__':
     vehicle_num = 2
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
-    reward_type = 'team_spirit'
-    cooperative_weight = 0.5
+    reward_type = 'distance'
+    cooperative_weight = 1 / (vehicle_num * 1.5)
     negative_constant_reward = -0.05
     weight_shape = height * width
     share_policy = True
