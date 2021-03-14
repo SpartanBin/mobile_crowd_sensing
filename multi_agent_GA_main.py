@@ -42,8 +42,8 @@ if __name__ == '__main__':
     ]
     output_dim = [64, 32]
     action_dim = 4
-    num_episodes_to_cal = 10
-    pop_size = 20
+    num_episodes_to_cal = 100
+    pop_size = 50
     bound = None
     GenomeClass = GenomeBinary
     cross_prob = 0.8

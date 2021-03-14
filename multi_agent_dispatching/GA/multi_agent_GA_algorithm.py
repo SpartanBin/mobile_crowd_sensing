@@ -2,6 +2,7 @@ import sys
 import os
 from typing import Optional
 import copy
+from multiprocessing.dummy import Pool
 import pickle
 
 import numpy as np
@@ -239,10 +240,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         self.genome[worst_index] = self.genome.best
         self.fitness_array[worst_index] = self.best_fitness
 
-    def calculate_fitness(self, chrom, multi_agent_params, env, new_obs, num_episodes_to_cal):
-
-        multi_agent_params = chrom_to_params(chrom, multi_agent_params)
-        self.policy.load_state_dict(multi_agent_params)
+    def calculate_fitness(self, policy, env, new_obs, num_episodes_to_cal):
 
         fitness = []
         for _ in range(num_episodes_to_cal):
@@ -254,7 +252,7 @@ class multi_agent_GA(multi_agent_control.multi_agent):
                 with torch.no_grad():
                     loc_features = new_obs[0]
                     weight_features = new_obs[1]
-                    distributions, _, _ = self.policy.forward(
+                    distributions, _, _ = policy.forward(
                         loc_features=loc_features,
                         weight_features=weight_features,
                     )
@@ -272,27 +270,38 @@ class multi_agent_GA(multi_agent_control.multi_agent):
         return fitness, mean_episode_time_cost
 
     def update_fitness(self):
+
         new_obs = self.env.reset()
-        episodes_time_cost = []
-        for idx in range(self.pop_size):
-            self.fitness_array[idx], episode_time_cost = self.calculate_fitness(
+        episodes_time_cost = np.zeros(self.pop_size)
+        episodes_time_cost[:] = np.inf
+        pop_ids = list(range(self.pop_size))
+
+        def calculate_fitness(idx):
+            policy = copy.deepcopy(self.policy)
+            multi_agent_params = chrom_to_params(
                 chrom=self.genome.view(idx, self.bound),
                 multi_agent_params=self.multi_agent_params,
+            )
+            policy.load_state_dict(multi_agent_params)
+            self.fitness_array[idx], episode_time_cost = self.calculate_fitness(
+                policy=policy,
                 env=copy.deepcopy(self.env),
                 new_obs=copy.deepcopy(new_obs),
                 num_episodes_to_cal=self.num_episodes_to_cal,
             )
-            episodes_time_cost.append(episode_time_cost)
-        return np.min(episodes_time_cost)
+            episodes_time_cost[idx] = episode_time_cost
+
+        pool_ = Pool()
+        pool_.map(calculate_fitness, pop_ids)
+        pool_.close()
+        pool_.join()
+
+        return episodes_time_cost.min()
 
     def result(self):
         return self.genome.view_best(self.bound)
 
     def genetic(self, num_gen):
-
-        cur_state = 3000000000000000000000000000
-        best_state = cur_state
-        best_generation = None
 
         for e in range(num_gen):
             self.genome.select(self.fitness_array)
@@ -315,7 +324,6 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             in these {} episodes, the number of vehicle is {}, 
             time_mean_{}_episodes_time_cost = {}, 
             the_shortest_100_episodes_mean_time_cost = {}, 
-            random_policy_episodes_mean_time_cost = {}, 
             the_last_100_episodes_mean_time_cost = {}, 
             the_best_last_100_episodes_mean_time_cost = {}
             ******************************************************************************************************
@@ -323,7 +331,6 @@ class multi_agent_GA(multi_agent_control.multi_agent):
                 self.num_episodes_to_cal, self.vehicle_num,
                 self.num_episodes_to_cal, episode_time_cost,
                 np.mean(self.the_shortest_100_episodes_time_cost),
-                self.random_policy_episodes_mean_time_cost,
                 last_100_episodes_mean_time_cost,
                 self.the_best_last_100_episodes_mean_time_cost
             ))
@@ -335,26 +342,3 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             if e % 10 == 0:
                 with open('genome_v{}.pickle'.format(self.vehicle_num), 'wb') as file:
                     pickle.dump(self.genome, file)
-                env = copy.deepcopy(self.env)
-                new_obs = env.reset()
-
-                _, cur_state = self.calculate_fitness(
-                    chrom=self.result(),
-                    multi_agent_params=self.multi_agent_params,
-                    env=env,
-                    new_obs=new_obs,
-                    num_episodes_to_cal=100,
-                )
-
-                if cur_state < best_state:
-                    best_state = cur_state
-                    best_generation = e + 1
-                print('''
-                **------------------------------------------------------------------------------------------**
-                **------------------------------------------------------------------------------------------**
-                now have been {}th generation, current test episode_time_cost = {}; 
-                best test episode_time_cost = {}, the {}th generation result is best
-                **------------------------------------------------------------------------------------------**
-                **------------------------------------------------------------------------------------------**
-                '''.format(
-                    e + 1, cur_state, best_state, best_generation))
