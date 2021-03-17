@@ -310,29 +310,18 @@ class multi_agent_GA(multi_agent_control.multi_agent):
             episode_time_cost = self.update_fitness()
             cur_best_fitness = self.fitness_array.max()
 
-            self.the_last_100_episodes_time_cost.append(episode_time_cost)
-            self.the_shortest_100_episodes_time_cost.append(episode_time_cost)
-            last_100_episodes_mean_time_cost = np.mean(self.the_last_100_episodes_time_cost)
-            if len(self.the_last_100_episodes_time_cost) > 100 / self.num_episodes_to_cal:
-                if last_100_episodes_mean_time_cost < self.the_best_last_100_episodes_mean_time_cost:
-                    self.the_best_last_100_episodes_mean_time_cost = last_100_episodes_mean_time_cost
-                self.the_last_100_episodes_time_cost.pop(0)
-                self.the_shortest_100_episodes_time_cost.sort()
-                self.the_shortest_100_episodes_time_cost.pop()
+            if episode_time_cost < self.the_best_last_100_episodes_mean_time_cost:
+                self.the_best_last_100_episodes_mean_time_cost = episode_time_cost
             print('''
             ******************************************************************************************************
             in these {} episodes, the number of vehicle is {}, 
             time_mean_{}_episodes_time_cost = {}, 
-            the_shortest_100_episodes_mean_time_cost = {}, 
-            the_last_100_episodes_mean_time_cost = {}, 
-            the_best_last_100_episodes_mean_time_cost = {}
+            the_best_{}_episodes_mean_time_cost = {}
             ******************************************************************************************************
             '''.format(
                 self.num_episodes_to_cal, self.vehicle_num,
                 self.num_episodes_to_cal, episode_time_cost,
-                np.mean(self.the_shortest_100_episodes_time_cost),
-                last_100_episodes_mean_time_cost,
-                self.the_best_last_100_episodes_mean_time_cost
+                self.num_episodes_to_cal, self.the_best_last_100_episodes_mean_time_cost
             ))
 
             if cur_best_fitness > self.best_fitness:
