@@ -27,8 +27,8 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
     def __init__(
             self, height: int, width: int, low_second: Union[int, float], high_second: Union[int, float],
             grid_height: int, grid_width: int, action_interval: Union[int, float],
-            episode_duration: Union[int, float, None], vehicle_num: int,
-            seed: int,
+            left_reward_to_stop: float, episode_duration: Union[int, float, None],
+            vehicle_num: int, seed: int,
     ):
         '''
         generate link matrix saving link relation between every network node, because of rectangle shape,
@@ -58,6 +58,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.grid_width = grid_width
         self.action_interval = action_interval
         self.past_time = 0
+        self.left_reward_to_stop = left_reward_to_stop
         self.episode_duration = episode_duration
         if self.episode_duration is None:
             self.episode_duration = float('inf')
@@ -316,7 +317,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             grid_width=self.grid_width,
         )
         self.left_reward = self.grid_weight.sum()
-        if self.left_reward <= 0.4:
+        if self.left_reward <= self.left_reward_to_stop:
             done = True
 
         episode_time_cost += self.action_interval
@@ -340,7 +341,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         '''
 
         left_time = self.episode_duration - self.past_time
-        assert left_time > 0 and self.left_reward > 0.4, 'you need reset the environment first'
+        assert left_time > 0 and self.left_reward > self.left_reward_to_stop, 'you need reset the environment first'
 
         # iterate the item in self.vehicle_action_paths where key value equal to - 10000
         for i in np.where(np.array(self.vehicle_action_paths) == - 10000)[0]:
@@ -375,7 +376,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         '''
 
         left_time = self.episode_duration - self.past_time
-        assert left_time > 0 and self.left_reward > 0.4, 'you need reset the environment first'
+        assert left_time > 0 and self.left_reward > self.left_reward_to_stop, 'you need reset the environment first'
 
         actions = np.array([np.nan] * self.vehicle_num)
         for i in range(self.vehicle_num):
@@ -411,6 +412,7 @@ if __name__ == '__main__':
         grid_height=2,
         grid_width=2,
         action_interval=180,
+        left_reward_to_stop=0.01,
         episode_duration=3600,
         vehicle_num=vehicle_num,
         seed=400,

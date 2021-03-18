@@ -17,11 +17,12 @@ if __name__ == '__main__':
     grid_height = 2
     grid_width = 2
     action_interval = 180
+    left_reward_to_stop = 0.01
     episode_duration = 3600 * 24 * 4
     vehicle_num = 2
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
-    reward_type = 'distance'
+    reward_type = 'greedy'
     cooperative_weight = 1 / (vehicle_num * 1.5)
     negative_constant_reward = -0.05
     weight_shape = height * width
@@ -53,7 +54,7 @@ if __name__ == '__main__':
     n_steps = 2048
     batch_size = n_steps
     n_epochs = 10
-    gamma = 0.99
+    gamma = 0.95  # In OpenAI Five, when set this to 0.99, policy performs best
     gae_lambda = 0.95
     clip_range = 0.2
     clip_range_vf = None
@@ -72,6 +73,7 @@ if __name__ == '__main__':
         grid_height=grid_height,
         grid_width=grid_width,
         action_interval=action_interval,
+        left_reward_to_stop=left_reward_to_stop,
         episode_duration=episode_duration,
         vehicle_num=vehicle_num,
         seed=seed,
