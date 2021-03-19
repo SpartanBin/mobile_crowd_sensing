@@ -418,24 +418,24 @@ if __name__ == '__main__':
         seed=400,
     )
     env.reset()
+    ac_probs_dict = {}
+    for i in range(vehicle_num):
+        ac_probs_dict[i] = torch.tensor([0.25] * 4)
     st = time.time()
-    for _ in range(10000):
-        actions = {}
-        for i in range(vehicle_num):
-            actions[i] = np.random.randint(low=0, high=4)
-
-        output = env.step(
-            ac_dict=actions,
-            reward_type='greedy_mean',
-            cooperative_weight=0.5,
-            negative_constant_reward=0,
-            episode_time_cost=0,
-        )
-        print(env.left_reward)
-        if type(output) != np.ndarray:
-            vehicle_states, reward, done, episode_time_cost = output
-            print(vehicle_states)
-            print(reward)
-            print(done)
+    episodes_total_scores = []
+    for _ in range(1000):
+        done = False
+        while not done:
+            _, _, _, done, _ = env.step_by_action_probs(
+                ac_probs_dict=ac_probs_dict,
+                reward_type='greedy',
+                cooperative_weight=0.5,
+                negative_constant_reward=0,
+                episode_time_cost=0,
+            )
+        episode_total_score = 1 - env.left_reward
+        episodes_total_scores.append(episode_total_score)
+        env.reset()
+    print(np.mean(episodes_total_scores))
     et = time.time()
     print(et - st)
