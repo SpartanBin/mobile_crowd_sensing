@@ -103,11 +103,11 @@ class multi_agent():
         self.num_timesteps = 0
         self.episode_time_cost = 0
         self.episode = 0
-        self.the_last_100_episodes_time_cost = []
-        self.last_100_episodes_mean_time_cost = np.inf
-        self.the_best_last_100_episodes_mean_time_cost = np.inf
-        self.the_shortest_100_episodes_time_cost = []
-        self.random_policy_episodes_mean_time_cost = None
+        self.the_last_100_episodes_total_scores = []
+        self.last_100_episodes_mean_total_score = 0
+        self.the_best_last_100_episodes_mean_total_score = 0
+        self.the_best_100_episodes_total_scores = []
+        self.random_policy_100_episodes_mean_total_score = None
         self._last_obs = self.env.reset()
         self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1))
         self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(

@@ -18,13 +18,13 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     left_reward_to_stop = 0.01
-    episode_duration = 3600 * 24 * 4
+    episode_duration = 3600
     vehicle_num = 2
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'
     cooperative_weight = 1 / (vehicle_num * 1.5)
-    negative_constant_reward = -0.05
+    negative_constant_reward = 0
     weight_shape = height * width
     share_policy = True
     ortho_init = True
@@ -54,7 +54,7 @@ if __name__ == '__main__':
     n_steps = 2048
     batch_size = n_steps
     n_epochs = 10
-    gamma = 0.95  # In OpenAI Five, when set this to 0.99, policy performs best
+    gamma = 0.99  # In OpenAI Five, when set this to 0.99, policy performs best
     gae_lambda = 0.95
     clip_range = 0.2
     clip_range_vf = None
