@@ -135,34 +135,34 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             if done:
                 self.episode += 1
                 episode_total_score = 1 - self.env.left_reward
-                self.the_last_100_episodes_total_scores.append(episode_total_score)
-                self.the_best_100_episodes_total_scores.append(episode_total_score)
-                self.last_100_episodes_mean_total_score = np.mean(self.the_last_100_episodes_total_scores)
-                if len(self.the_last_100_episodes_total_scores) > 100:
-                    if self.last_100_episodes_mean_total_score > self.the_best_last_100_episodes_mean_total_score:
-                        self.the_best_last_100_episodes_mean_total_score = self.last_100_episodes_mean_total_score
+                self.the_last_1000_episodes_total_scores.append(episode_total_score)
+                self.the_best_1000_episodes_total_scores.append(episode_total_score)
+                self.last_1000_episodes_mean_total_score = np.mean(self.the_last_1000_episodes_total_scores)
+                if len(self.the_last_1000_episodes_total_scores) > 1000:
+                    if self.last_1000_episodes_mean_total_score > self.the_best_last_1000_episodes_mean_total_score:
+                        self.the_best_last_1000_episodes_mean_total_score = self.last_1000_episodes_mean_total_score
                         need_test = True
-                    self.the_last_100_episodes_total_scores.pop(0)
-                    self.the_best_100_episodes_total_scores.sort()
-                    self.the_best_100_episodes_total_scores.pop(0)
+                    self.the_last_1000_episodes_total_scores.pop(0)
+                    self.the_best_1000_episodes_total_scores.sort()
+                    self.the_best_1000_episodes_total_scores.pop(0)
                 print('''
                 ******************************************************************************************************
                 in {}th episode, the number of vehicle is {}, reward_type is '{}', 
                 cooperative_weight is {}, negative_constant_reward is {}, 
                 ------------------------------------------------------------------------------------------------------
                 episode_time_cost = {}, episode_total_score = {}, select_action_times = {}, 
-                random_policy_100_episodes_mean_total_score = {}, 
-                the_best_100_episodes_mean_total_score = {}, 
-                last_100_episodes_mean_total_score = {}, 
-                the_best_last_100_episodes_mean_total_score = {}
+                random_policy_1000_episodes_mean_total_score = {}, 
+                the_best_1000_episodes_mean_total_score = {}, 
+                last_1000_episodes_mean_total_score = {}, 
+                the_best_last_1000_episodes_mean_total_score = {}
                 ******************************************************************************************************
                 '''.format(
                     self.episode, self.vehicle_num, self.reward_type, self.cooperative_weight,
                     self.negative_constant_reward, self.episode_time_cost, episode_total_score,
-                    self.select_action_time, self.random_policy_100_episodes_mean_total_score,
-                    np.mean(self.the_best_100_episodes_total_scores),
-                    self.last_100_episodes_mean_total_score,
-                    self.the_best_last_100_episodes_mean_total_score,
+                    self.select_action_time, self.random_policy_1000_episodes_mean_total_score,
+                    np.mean(self.the_best_1000_episodes_total_scores),
+                    self.last_1000_episodes_mean_total_score,
+                    self.the_best_last_1000_episodes_mean_total_score,
                 ))
                 self.episode_time_cost = 0
                 new_obs = self.env.reset()
@@ -304,18 +304,18 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
     def save(self):
         self.best_state['best_episode'] = self.best_episode
         self.best_state['best_train_session'] = self.best_train_session
-        self.best_state['random_policy_100_episodes_mean_total_score'] = \
-            self.random_policy_100_episodes_mean_total_score
-        self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
+        self.best_state['random_policy_1000_episodes_mean_total_score'] = \
+            self.random_policy_1000_episodes_mean_total_score
+        self.best_state['the_best_1000_episodes_mean_total_score'] = np.mean(self.the_best_1000_episodes_total_scores)
         with open('PPO_state_vehicle{}.pickle'.format(self.vehicle_num), 'wb') as file:
             pickle.dump(self.best_state, file)
 
     def learn(self, total_timesteps: int, test_episode_times: int):
 
         self.init_learn()
-        self.random_policy_100_episodes_mean_total_score = self.test(test_episode_times=test_episode_times)
-        self.cur_state = self.random_policy_100_episodes_mean_total_score
-        self.best_state = {'test_100_episodes_mean_total_score': self.random_policy_100_episodes_mean_total_score,
+        self.random_policy_1000_episodes_mean_total_score = self.test(test_episode_times=test_episode_times)
+        self.cur_state = self.random_policy_1000_episodes_mean_total_score
+        self.best_state = {'test_1000_episodes_mean_total_score': self.random_policy_1000_episodes_mean_total_score,
                            'policy_params': self.policy.state_dict()}
         self.best_episode = 0
 
@@ -327,8 +327,8 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             if need_test:
                 test_session += 1
                 self.cur_state = self.test(test_episode_times=test_episode_times)
-                if self.cur_state > self.best_state['test_100_episodes_mean_total_score']:
-                    self.best_state['test_100_episodes_mean_total_score'] = self.cur_state
+                if self.cur_state > self.best_state['test_1000_episodes_mean_total_score']:
+                    self.best_state['test_1000_episodes_mean_total_score'] = self.cur_state
                     self.best_state['policy_params'] = self.policy.state_dict()
                     self.best_episode = self.episode
                     self.best_train_session = train_session
@@ -336,18 +336,18 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 **------------------------------------------------------------------------------------------**
                 **------------------------------------------------------------------------------------------**
                 {}th test: 
-                now have been {}th episode, {}th training, current test 100_episodes_mean_total_score = {}; 
-                best test 100_episodes_mean_total_score = {}, the result of {}th episode, {}th training is best
+                now have been {}th episode, {}th training, current test 1000_episodes_mean_total_score = {}; 
+                best test 1000_episodes_mean_total_score = {}, the result of {}th episode, {}th training is best
                 **------------------------------------------------------------------------------------------**
                 **------------------------------------------------------------------------------------------**
                 '''.format(
                     test_session, self.episode, train_session, self.cur_state,
-                    self.best_state['test_100_episodes_mean_total_score'], self.best_episode, self.best_train_session))
+                    self.best_state['test_1000_episodes_mean_total_score'], self.best_episode, self.best_train_session))
                 self.save()
             self.train()
             train_session += 1
             print('training successful in {}th training session'.format(train_session))
-            if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 2:
+            if self.last_1000_episodes_mean_total_score <= self.the_best_last_1000_episodes_mean_total_score / 2:
                 break
 
         self.save()
