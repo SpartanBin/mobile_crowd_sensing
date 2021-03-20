@@ -110,5 +110,5 @@ if __name__ == '__main__':
     )
     model.learn(
         total_timesteps=1000000,
-        test_episode_times=1000,
+        test_episode_times=100,
     )
