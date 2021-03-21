@@ -6,6 +6,7 @@ import numpy as np
 class RolloutBufferSamples(NamedTuple):
     loc: np.ndarray
     weight: np.ndarray
+    number_of_seconds: np.ndarray
     actions: np.ndarray
     old_values: np.ndarray
     old_log_prob: np.ndarray
@@ -53,12 +54,14 @@ class RolloutBuffer():
         self.gamma = gamma
         self.loc, self.weight, self.actions, self.rewards, self.advantages = None, None, None, None, None
         self.returns, self.dones, self.values, self.log_probs = None, None, None, None
+        self.number_of_seconds = None
         self.generator_ready = False
         self.reset()
 
     def reset(self) -> None:
         self.loc = np.zeros((self.buffer_size, self.vehicle_num * 2), dtype=np.float32)
         self.weight = np.zeros((self.buffer_size, self.weight_shape), dtype=np.float32)
+        self.number_of_seconds = np.zeros(self.buffer_size, dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.rewards = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.returns = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
@@ -71,7 +74,7 @@ class RolloutBuffer():
         self.full = False
 
     def add(
-        self, obs: list, actions: np.ndarray, reward: np.ndarray,
+        self, obs: list, number_of_seconds: float, actions: np.ndarray, reward: np.ndarray,
             done: bool, value: np.ndarray, log_prob: np.ndarray,
     ) -> None:
         """
@@ -87,6 +90,7 @@ class RolloutBuffer():
 
         self.loc[self.pos] = obs[0].copy()
         self.weight[self.pos] = obs[1].copy()
+        self.number_of_seconds[self.pos] = number_of_seconds
         self.actions[self.pos] = actions.copy()
         self.rewards[self.pos] = reward.copy()
         self.dones[self.pos] = np.array(done).copy()
@@ -146,6 +150,7 @@ class RolloutBuffer():
         data = (
             self.loc[batch_inds],
             self.weight[batch_inds],
+            self.number_of_seconds[batch_inds],
             self.actions[batch_inds],
             self.values[batch_inds],
             self.log_probs[batch_inds],

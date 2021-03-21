@@ -88,7 +88,19 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             gae_lambda=self.gae_lambda,
             gamma=self.gamma,
         )
-        self.policy = policies.multi_agent_ACP(
+        # self.policy = policies.multi_agent_ACP(
+        #     vehicle_num=self.vehicle_num,
+        #     weight_shape=self.weight_shape,
+        #     share_policy=self.share_policy,
+        #     ortho_init=self.ortho_init,
+        #     conv_params=self.conv_params,
+        #     add_BN=self.add_BN,
+        #     output_dim=self.output_dim,
+        #     share_params=self.share_params,
+        #     action_dim=self.action_dim,
+        #     learning_rate=self.learning_rate,
+        # ).to(self.device).eval()
+        self.policy = policies.multi_agent_ACP_with_timer(
             vehicle_num=self.vehicle_num,
             weight_shape=self.weight_shape,
             share_policy=self.share_policy,
@@ -96,7 +108,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             conv_params=self.conv_params,
             add_BN=self.add_BN,
             output_dim=self.output_dim,
-            share_params=self.share_params,
             action_dim=self.action_dim,
             learning_rate=self.learning_rate,
         ).to(self.device).eval()
@@ -110,11 +121,15 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         assert self._last_obs is not None, "No previous observation was provided"
         need_test = False
         timestep = 0
+        number_of_episode_timestep = 0
         done = False
         self.rollout_buffer.reset()
         self.policy.eval()
 
         while timestep < self.n_steps:
+
+            number_of_seconds = (self.env.episode_duration - number_of_episode_timestep * self.env.action_interval) \
+                                / self.env.episode_duration
 
             with torch.no_grad():
                 # Convert to pytorch tensor
@@ -123,6 +138,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 distributions, values, _ = self.policy.forward(
                     loc_features=loc_features,
                     weight_features=weight_features,
+                    number_of_seconds=np.array([number_of_seconds]),
                 )
             values = values.cpu().numpy()
 
@@ -166,17 +182,23 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                         self.the_best_last_100_episodes_mean_total_score,
                     ))
                 self.episode_time_cost = 0
-                new_obs = self.env.reset()
                 self.select_action_time = 0
+                new_obs = self.env.reset()
+                number_of_episode_timestep = 0
             new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
             new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
 
             self.num_timesteps += 1
             timestep += 1
 
-            self.rollout_buffer.add(self._last_obs, actions, reward, self._last_done, values, log_probs)
+            self.rollout_buffer.add(self._last_obs, number_of_seconds, actions, reward,
+                                    self._last_done, values, log_probs)
             self._last_obs = new_obs
             self._last_done = done
+            number_of_episode_timestep += 1
+
+        number_of_seconds = (self.env.episode_duration - number_of_episode_timestep * self.env.action_interval) \
+                            / self.env.episode_duration
 
         with torch.no_grad():
             # Compute value for the last timestep
@@ -185,6 +207,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             _, values, _ = self.policy.forward(
                 loc_features=loc_features,
                 weight_features=weight_features,
+                number_of_seconds=np.array([number_of_seconds]),
             )
         values = values.cpu().numpy()
 
@@ -214,6 +237,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 values, log_prob, entropy = self.policy.forward(
                     loc_features=rollout_data.loc,
                     weight_features=rollout_data.weight[:, np.newaxis],
+                    number_of_seconds=rollout_data.number_of_seconds,
                     actions=rollout_data.actions,
                 )
 
@@ -291,6 +315,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     distributions, _, _ = self.policy.forward(
                         loc_features=loc_features,
                         weight_features=weight_features,
+                        number_of_seconds=None,
                     )
                 _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
                     env=env,
