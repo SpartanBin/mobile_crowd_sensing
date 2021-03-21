@@ -760,14 +760,120 @@ result with (1 / (vehicle_number * 1.5)) weight
 
 | the number of vehicles | test_cost | random_cost | the shortest 100 episode |
 | ---------------------- | --------- | ----------- | ------------------------ |
-| 2                      |           | 48627       |                          |
-| 4                      |           | 17712       |                          |
-| 6                      |           | 10647       |                          |
-| 8                      |           | 6489        |                          |
-| 10                     |           | 4923        |                          |
+| 2                      | 18313     | 48627       | 9884                     |
+| 4                      | 13352     | 17712       | 6962                     |
+| 6                      | 7857      | 10647       | 3951                     |
+| 8                      | 5506      | 6489        | 2608                     |
+| 10                     | 3960      | 4923        | 1733                     |
 | 12                     |           |             |                          |
 | 16                     |           |             |                          |
 | 20                     |           |             |                          |
+
+
+
+### discussion
+
+Distance weighted reward doesn't work.
+
+
+
+## experiment 14: change the episode ending condition
+
+
+
+### Environment
+
+- Episode over conditions: episode duration time exceeds 3600 seconds.
+- Others are same to experiment 1
+
+#### timestep
+
+same to experiment 13
+
+#### reward
+
+same to experiment 7(greedy)
+
+#### state
+
+same to experiment 13
+
+#### action
+
+same to experiment 13
+
+
+
+### model
+
+same to experiment 13
+
+
+
+### result
+
+| the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
+| ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
+| 2                      | 0.2232                             | 0.1518                                      | 0.4050                                 |
+| 4                      | 0.3320                             | 0.2758                                      | 0.5550                                 |
+| 6                      |                                    | 0.3867                                      |                                        |
+| 8                      |                                    | 0.4762                                      |                                        |
+| 10                     | 0.5923                             | 0.5474                                      | 0.7837                                 |
+| 12                     |                                    |                                             |                                        |
+| 16                     |                                    |                                             |                                        |
+| 20                     |                                    |                                             |                                        |
+
+
+
+### discussion
+
+
+
+## experiment 15: DQL
+
+
+
+### Environment
+
+same to experiment 14
+
+#### timestep
+
+same to experiment 14
+
+#### reward
+
+same to experiment 14
+
+#### state
+
+same to experiment 14
+
+#### action
+
+same to experiment 14
+
+
+
+### model
+
+- Use Deep Q learning as optimization method.
+- Others are same to experiment 14
+
+
+
+### result
+
+| the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
+| ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
+| 2                      | 0.1851                             | 0.1518                                      | 0.3787                                 |
+| 4                      |                                    | 0.2758                                      |                                        |
+| 6                      |                                    | 0.3867                                      |                                        |
+| 8                      |                                    | 0.4762                                      |                                        |
+| 10                     |                                    | 0.5474                                      |                                        |
+| 12                     |                                    |                                             |                                        |
+| 16                     |                                    |                                             |                                        |
+| 20                     |                                    |                                             |                                        |
 
 
 
@@ -788,7 +894,9 @@ result with (1 / (vehicle_number * 1.5)) weight
 - [x] Change format of input from matrix to array with greedy reward.
 - [x] Try to use link matrix.
 - [x] Try greedy_mean reward.
-- [ ] Try GA.
+- [ ] ~~Try GA.~~
 - [x] Try team_spirit reward.
-- [ ] Try distance weighted reward.
-- [ ] Try more constant negative reward value.
+- [x] Try distance weighted reward.
+- [ ] ~~Try more constant negative reward value.~~
+- [ ] Change the episode ending condition.
+- [ ] Try DQL.
