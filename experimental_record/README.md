@@ -816,8 +816,8 @@ same to experiment 13
 | ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
 | 2                      | 0.2232                             | 0.1518                                      | 0.4050                                 |
 | 4                      | 0.3320                             | 0.2758                                      | 0.5550                                 |
-| 6                      |                                    | 0.3867                                      |                                        |
-| 8                      |                                    | 0.4762                                      |                                        |
+| 6                      | 0.4358                             | 0.3867                                      | 0.6435                                 |
+| 8                      | 0.5257                             | 0.4762                                      | 0.7087                                 |
 | 10                     | 0.5923                             | 0.5474                                      | 0.7837                                 |
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
@@ -867,10 +867,10 @@ same to experiment 14
 | the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
 | ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
 | 2                      | 0.1851                             | 0.1518                                      | 0.3787                                 |
-| 4                      |                                    | 0.2758                                      |                                        |
-| 6                      |                                    | 0.3867                                      |                                        |
-| 8                      |                                    | 0.4762                                      |                                        |
-| 10                     |                                    | 0.5474                                      |                                        |
+| 4                      | 0.3178                             | 0.2758                                      | 0.5593                                 |
+| 6                      | 0.4286                             | 0.3867                                      | 0.6710                                 |
+| 8                      | 0.5101                             | 0.4762                                      | 0.7462                                 |
+| 10                     | 0.5784                             | 0.5474                                      | 0.8075                                 |
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
 | 20                     |                                    |                                             |                                        |
@@ -878,6 +878,61 @@ same to experiment 14
 
 
 ### discussion
+
+
+
+## experiment 16: add timer to estimate state value
+
+
+
+### Environment
+
+same to experiment 15
+
+#### timestep
+
+same to experiment 15
+
+#### reward
+
+same to experiment 15
+
+#### state
+
+- Count the remaining end time of the episode and add it to the model. 
+- Others are same to experiment 15
+
+#### action
+
+same to experiment 15
+
+
+
+### model
+
+- Add the remaining time as a new feature to the convolutional layer.
+- Others are same to experiment 14
+
+
+
+### result
+
+| the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
+| ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
+| 2                      | 0.2343                             | 0.1518                                      | 0.4254                                 |
+| 4                      | 0.3397                             | 0.2758                                      | 0.5565                                 |
+| 6                      | 0.4218                             | 0.3867                                      | 0.6424                                 |
+| 8                      | 0.5103                             | 0.4762                                      | 0.7025                                 |
+| 10                     | 0.5890                             | 0.5474                                      | 0.7630                                 |
+| 12                     |                                    |                                             |                                        |
+| 16                     |                                    |                                             |                                        |
+| 20                     |                                    |                                             |                                        |
+
+
+
+### discussion
+
+As the number of vehicles increases, the effect becomes less effective.
 
 
 
@@ -898,5 +953,6 @@ same to experiment 14
 - [x] Try team_spirit reward.
 - [x] Try distance weighted reward.
 - [ ] ~~Try more constant negative reward value.~~
-- [ ] Change the episode ending condition.
-- [ ] Try DQL.
+- [x] Change the episode ending condition.
+- [x] Try DQL.
+- [x] Add timer to estimate state value.
