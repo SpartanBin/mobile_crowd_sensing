@@ -88,19 +88,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             gae_lambda=self.gae_lambda,
             gamma=self.gamma,
         )
-        # self.policy = policies.multi_agent_ACP(
-        #     vehicle_num=self.vehicle_num,
-        #     weight_shape=self.weight_shape,
-        #     share_policy=self.share_policy,
-        #     ortho_init=self.ortho_init,
-        #     conv_params=self.conv_params,
-        #     add_BN=self.add_BN,
-        #     output_dim=self.output_dim,
-        #     share_params=self.share_params,
-        #     action_dim=self.action_dim,
-        #     learning_rate=self.learning_rate,
-        # ).to(self.device).eval()
-        self.policy = policies.multi_agent_ACP_with_timer(
+        self.policy = policies.multi_agent_ACP(
             vehicle_num=self.vehicle_num,
             weight_shape=self.weight_shape,
             share_policy=self.share_policy,
@@ -108,9 +96,21 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             conv_params=self.conv_params,
             add_BN=self.add_BN,
             output_dim=self.output_dim,
+            share_params=self.share_params,
             action_dim=self.action_dim,
             learning_rate=self.learning_rate,
         ).to(self.device).eval()
+        # self.policy = policies.multi_agent_ACP_with_timer(
+        #     vehicle_num=self.vehicle_num,
+        #     weight_shape=self.weight_shape,
+        #     share_policy=self.share_policy,
+        #     ortho_init=self.ortho_init,
+        #     conv_params=self.conv_params,
+        #     add_BN=self.add_BN,
+        #     output_dim=self.output_dim,
+        #     action_dim=self.action_dim,
+        #     learning_rate=self.learning_rate,
+        # ).to(self.device).eval()
 
     def collect_rollouts(self):
         """
@@ -138,8 +138,12 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 distributions, values, _ = self.policy.forward(
                     loc_features=loc_features,
                     weight_features=weight_features,
-                    number_of_seconds=np.array([number_of_seconds]),
                 )
+                # distributions, values, _ = self.policy.forward(
+                #     loc_features=loc_features,
+                #     weight_features=weight_features,
+                #     number_of_seconds=np.array([number_of_seconds]),
+                # )
             values = values.cpu().numpy()
 
             actions, log_probs, new_obs, reward, done, self.episode_time_cost = self.make_one_step_forward_for_env(
@@ -207,8 +211,12 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             _, values, _ = self.policy.forward(
                 loc_features=loc_features,
                 weight_features=weight_features,
-                number_of_seconds=np.array([number_of_seconds]),
             )
+            # _, values, _ = self.policy.forward(
+            #     loc_features=loc_features,
+            #     weight_features=weight_features,
+            #     number_of_seconds=np.array([number_of_seconds]),
+            # )
         values = values.cpu().numpy()
 
         self.rollout_buffer.compute_returns_and_advantage(last_values=values, done=done)
@@ -237,9 +245,14 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 values, log_prob, entropy = self.policy.forward(
                     loc_features=rollout_data.loc,
                     weight_features=rollout_data.weight[:, np.newaxis],
-                    number_of_seconds=rollout_data.number_of_seconds,
                     actions=rollout_data.actions,
                 )
+                # values, log_prob, entropy = self.policy.forward(
+                #     loc_features=rollout_data.loc,
+                #     weight_features=rollout_data.weight[:, np.newaxis],
+                #     number_of_seconds=rollout_data.number_of_seconds,
+                #     actions=rollout_data.actions,
+                # )
 
                 # Normalize advantage
                 advantages = rollout_data.advantages
@@ -315,8 +328,12 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     distributions, _, _ = self.policy.forward(
                         loc_features=loc_features,
                         weight_features=weight_features,
-                        number_of_seconds=None,
                     )
+                    # distributions, _, _ = self.policy.forward(
+                    #     loc_features=loc_features,
+                    #     weight_features=weight_features,
+                    #     number_of_seconds=None,
+                    # )
                 _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
                     env=env,
                     distributions=distributions,
@@ -339,7 +356,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
     def learn(self, total_timesteps: int, test_episode_times: int):
 
         self.init_learn()
-        self.random_policy_100_episodes_mean_total_score = self.test(test_episode_times=test_episode_times)
+        self.random_policy_100_episodes_mean_total_score = 0  # self.test(test_episode_times=test_episode_times)
         self.cur_state = self.random_policy_100_episodes_mean_total_score
         self.best_state = {'test_100_episodes_mean_total_score': self.random_policy_100_episodes_mean_total_score,
                            'policy_params': self.policy.state_dict()}
