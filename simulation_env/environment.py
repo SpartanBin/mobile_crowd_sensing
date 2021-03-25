@@ -403,10 +403,10 @@ if __name__ == '__main__':
 
     import time
 
-    vehicle_num = 4
+    vehicle_num = 10
     env = generate_rectangle_network_action_destination_env(
-        height=20,
-        width=20,
+        height=30,
+        width=30,
         low_second=30,
         high_second=300,
         grid_height=2,
@@ -423,7 +423,7 @@ if __name__ == '__main__':
         ac_probs_dict[i] = torch.tensor([0.25] * 4)
     st = time.time()
     episodes_total_scores = []
-    for _ in range(1000):
+    for _ in range(100):
         done = False
         while not done:
             _, _, _, done, _ = env.step_by_action_probs(

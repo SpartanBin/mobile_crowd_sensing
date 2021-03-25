@@ -936,6 +936,58 @@ As the number of vehicles increases, the effect becomes less effective.
 
 
 
+## experiment 17: test a larger rectangular network 
+
+
+
+### Environment
+
+- Expand the nodes of the rectangular road network to 30 * 30.
+- Others are same to experiment 14
+
+#### timestep
+
+same to experiment 14
+
+#### reward
+
+same to experiment 14
+
+#### state
+
+same to experiment 14
+
+#### action
+
+same to experiment 14
+
+
+
+### model
+
+same to experiment 14
+
+
+
+### result
+
+| the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
+| ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
+| 2                      |                                    | 0.0660                                      |                                        |
+| 4                      |                                    | 0.1311                                      |                                        |
+| 6                      |                                    | 0.1942                                      |                                        |
+| 8                      |                                    | 0.2387                                      |                                        |
+| 10                     |                                    | 0.2925                                      |                                        |
+| 12                     |                                    |                                             |                                        |
+| 16                     |                                    |                                             |                                        |
+| 20                     |                                    |                                             |                                        |
+
+
+
+### discussion
+
+
+
 ## TODO
 
 - [x] Check environment code logic.
