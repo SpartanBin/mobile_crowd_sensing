@@ -974,10 +974,61 @@ same to experiment 14
 | the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
 | ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
 | 2                      | 0.1030                             | 0.0660                                      | 0.1965                                 |
-| 4                      |                                    | 0.1311                                      |                                        |
-| 6                      |                                    | 0.1942                                      |                                        |
+| 4                      | 0.1920                             | 0.1311                                      | 0.3120                                 |
+| 6                      | 0.2505                             | 0.1942                                      | 0.3912                                 |
 | 8                      | 0.3111                             | 0.2387                                      | 0.4620                                 |
 | 10                     | 0.3617                             | 0.2925                                      | 0.5009                                 |
+| 12                     |                                    |                                             |                                        |
+| 16                     |                                    |                                             |                                        |
+| 20                     |                                    |                                             |                                        |
+
+
+
+### discussion
+
+
+
+## experiment 18: test a larger rectangular network in DQL
+
+
+
+### Environment
+
+same to experiment 15
+
+#### timestep
+
+same to experiment 15
+
+#### reward
+
+same to experiment 15
+
+#### state
+
+same to experiment 15
+
+#### action
+
+same to experiment 15
+
+
+
+### model
+
+same to experiment 15
+
+
+
+### result
+
+| the number of vehicles | test 100 episodes mean total score | random policy 100 episodes mean total score | the best 100 episodes mean total score |
+| ---------------------- | ---------------------------------- | ------------------------------------------- | -------------------------------------- |
+| 2                      | 0.0970                             | 0.0660                                      | 0.1940                                 |
+| 4                      | 0.1788                             | 0.1311                                      | 0.3003                                 |
+| 6                      | 0.2470                             | 0.1942                                      | 0.3865                                 |
+| 8                      | 0.3169                             | 0.2387                                      | 0.4574                                 |
+| 10                     | 0.3610                             | 0.2925                                      | 0.5095                                 |
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
 | 20                     |                                    |                                             |                                        |
