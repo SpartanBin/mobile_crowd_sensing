@@ -1059,3 +1059,8 @@ same to experiment 15
 - [x] Change the episode ending condition.
 - [x] Try DQL.
 - [x] Add timer to estimate state value.
+- [x] Test 30 * 30 nodes in PPO and DQN. 
+- [ ] Sets the node selected for the environment for the action to the node that happens not to be reachable. 
+- [ ] Add direction features to model. 
+- [ ] Try inputing link matrix using GNN. 
+- [ ] Try cooperative reward and global state value estimating. 
