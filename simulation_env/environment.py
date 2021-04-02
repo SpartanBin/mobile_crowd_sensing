@@ -73,6 +73,8 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             ])
             self.vehicle_action_paths.append(- 10000)
         self.vehicle_states = np.array(self.vehicle_states)
+        self.reset()
+        self.episode_got_scores = np.zeros(self.grid_weight.shape)
         # self.generate_grid(
         #     grid_height=self.grid_height,
         #     grid_width=self.grid_width,
@@ -107,6 +109,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         vehicle_states_start = (self.vehicle_states[:, 0] * self.width + self.vehicle_states[:, 1]).reshape((-1, 1))
         vehicle_states_end = (self.vehicle_states[:, 2] * self.width + self.vehicle_states[:, 3]).reshape((-1, 1))
         vehicle_states = np.hstack((vehicle_states_start, vehicle_states_end))
+        self.episode_got_scores = np.zeros(self.grid_weight.shape)
 
         return [vehicle_states, node_weight]
 
@@ -292,6 +295,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         for key in first_passed_node_vehicle.keys():
             v = first_passed_node_vehicle[key]['vehicle']
             reward[v] += first_passed_node_vehicle[key]['reward']
+            self.episode_got_scores[key] += first_passed_node_vehicle[key]['reward']
 
         #################################################################
         # calculate final reward

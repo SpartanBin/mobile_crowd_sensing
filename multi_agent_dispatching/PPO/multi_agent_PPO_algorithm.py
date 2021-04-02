@@ -316,9 +316,14 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         env = copy.deepcopy(self.env)
         new_obs = env.reset()
         episodes_total_scores = []
+        episodes_grid_scores = []
+        episodes_got_scores = []
+        all_timesteps_socre = []
         for _ in range(test_episode_times):
             done = False
             episode_time_cost = 0
+            episodes_grid_scores += [env.grid_weight]
+            timesteps_socre = []
             while not done:
                 new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
                 new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
@@ -339,10 +344,13 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     distributions=distributions,
                     episode_time_cost=episode_time_cost,
                 )
+                timesteps_socre.append(1 - env.left_reward)
             episode_total_score = 1 - env.left_reward
             episodes_total_scores.append(episode_total_score)
+            all_timesteps_socre.append(timesteps_socre)
+            episodes_got_scores += [env.episode_got_scores]
             new_obs = env.reset()
-        return np.mean(episodes_total_scores)
+        return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
 
     def save(self):
         self.best_state['best_episode'] = self.best_episode
@@ -350,8 +358,9 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.best_state['random_policy_100_episodes_mean_total_score'] = \
             self.random_policy_100_episodes_mean_total_score
         self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
+        self.test_state['best_state'] = self.best_state
         with open('PPO_state_vehicle{}.pickle'.format(self.vehicle_num), 'wb') as file:
-            pickle.dump(self.best_state, file)
+            pickle.dump(self.test_state, file)
 
     def learn(self, total_timesteps: int, test_episode_times: int):
 
@@ -360,6 +369,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.cur_state = self.random_policy_100_episodes_mean_total_score
         self.best_state = {'test_100_episodes_mean_total_score': self.random_policy_100_episodes_mean_total_score,
                            'policy_params': self.policy.state_dict()}
+        self.test_state = {}
         self.best_episode = 0
 
         train_session = 0
@@ -373,10 +383,19 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
             #------------------------------------------test--------------------------------------------------
             test_session += 1
-            self.cur_state = self.test(test_episode_times=test_episode_times)
+            self.cur_state, episodes_grid_scores, episodes_got_scores, all_timesteps_socre = self.test(
+                test_episode_times=test_episode_times)
+
+            self.test_state[test_session] = {}
+            self.test_state[test_session]['test_100_episodes_mean_total_score'] = self.cur_state
+            self.test_state[test_session]['episodes_grid_scores'] = episodes_grid_scores
+            self.test_state[test_session]['episodes_got_scores'] = episodes_got_scores
+            self.test_state[test_session]['all_timesteps_socre'] = all_timesteps_socre
+
             if self.cur_state > self.best_state['test_100_episodes_mean_total_score']:
                 self.best_state['test_100_episodes_mean_total_score'] = self.cur_state
                 self.best_state['policy_params'] = self.policy.state_dict()
+                self.best_state['test_session'] = test_session
                 self.best_episode = self.episode
                 self.best_train_session = train_session
             print('''

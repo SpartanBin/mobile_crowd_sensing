@@ -10,8 +10,8 @@ from multi_agent_dispatching.PPO.multi_agent_PPO_algorithm import *
 
 if __name__ == '__main__':
 
-    height = 30
-    width = 30
+    height = 20
+    width = 20
     low_second = 30
     high_second = 300
     grid_height = 2
