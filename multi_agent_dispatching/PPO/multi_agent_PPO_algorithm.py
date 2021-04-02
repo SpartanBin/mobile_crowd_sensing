@@ -365,7 +365,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
     def learn(self, total_timesteps: int, test_episode_times: int):
 
         self.init_learn()
-        self.random_policy_100_episodes_mean_total_score = 0  # self.test(test_episode_times=test_episode_times)
+        self.random_policy_100_episodes_mean_total_score = 0
         self.cur_state = self.random_policy_100_episodes_mean_total_score
         self.best_state = {'test_100_episodes_mean_total_score': self.random_policy_100_episodes_mean_total_score,
                            'policy_params': self.policy.state_dict()}

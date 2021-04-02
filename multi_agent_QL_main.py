@@ -54,7 +54,7 @@ if __name__ == '__main__':
     EPS_START = 0.9
     EPS_END = 0.05
     max_grad_norm = 0.5
-    device = 'cuda'
+    device = 'cpu'
     seed = 4000
 
     env = generate_rectangle_network_action_destination_env(
