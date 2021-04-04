@@ -320,7 +320,8 @@ class multi_agent_QL(multi_agent_control.multi_agent):
             self.random_policy_100_episodes_mean_total_score
         self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
         self.test_state['best_state'] = self.best_state
-        with open('QL_state_vehicle{}.pickle'.format(self.vehicle_num), 'wb') as file:
+        with open('QL_state_vehicle{}_env_{}_{}.pickle'.format(
+                self.vehicle_num, self.env.height, self.env.width), 'wb') as file:
             pickle.dump(self.test_state, file)
 
     def learn(self, num_episodes: int, test_episode_times: int):
