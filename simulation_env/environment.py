@@ -407,7 +407,7 @@ if __name__ == '__main__':
 
     import time
 
-    vehicle_num = 10
+    vehicle_num = 20
     env = generate_rectangle_network_action_destination_env(
         height=30,
         width=30,
@@ -442,4 +442,4 @@ if __name__ == '__main__':
         env.reset()
     print(np.mean(episodes_total_scores))
     et = time.time()
-    print(et - st)
+    # print(et - st)

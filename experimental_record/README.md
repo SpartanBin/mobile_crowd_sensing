@@ -821,7 +821,7 @@ same to experiment 13
 | 10                     | 0.5923                             | 0.5474                                      | 0.7837                                 |
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
-| 20                     |                                    |                                             |                                        |
+| 20                     | 0.8073                             | 0.7907                                      | 0.9341                                 |
 
 
 
@@ -1032,6 +1032,55 @@ same to experiment 15
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
 | 20                     |                                    |                                             |                                        |
+
+
+
+### discussion
+
+
+
+## experiment 19: Marginal effect
+
+
+
+### Environment
+
+same to experiment 18
+
+#### timestep
+
+same to experiment 18
+
+#### reward
+
+same to experiment 18
+
+#### state
+
+same to experiment 18
+
+#### action
+
+same to experiment 18
+
+
+
+### model
+
+same to experiment 17 and 18
+
+
+
+### result
+
+| the number of vehicles | random policy 100 episodes mean total score in 20 * 20 rectangular network | test 100 episodes mean total score in 20 * 20 rectangular network |        | the best 100 episodes mean total score in 20 * 20 rectangular network |        | random policy 100 episodes mean total score in 30 * 30 rectangular network | test 100 episodes mean total score in 30 * 30 rectangular network |        | the best 100 episodes mean total score in 30 * 30 rectangular network |        |
+| ---------------------- | ------------------------------------------------------------ | ------------------------------------------------------------ | ------ | ------------------------------------------------------------ | ------ | ------------------------------------------------------------ | ------------------------------------------------------------ | ------ | ------------------------------------------------------------ | ------ |
+|                        |                                                              | PPO                                                          | DQN    | PPO                                                          | DQN    |                                                              | PPO                                                          | DQN    | PPO                                                          | DQN    |
+| 12                     | 0.6113                                                       | 0.6583                                                       | 0.6274 | 0.8286                                                       | 0.8507 | 0.3382                                                       | 0.4076                                                       | 0.4145 | 0.5618                                                       | 0.5832 |
+| 14                     | 0.6723                                                       | 0.6972                                                       | 0.6850 | 0.8597                                                       | 0.8935 | 0.3809                                                       | 0.4463                                                       | 0.4636 | 0.5915                                                       | 0.6219 |
+| 16                     | 0.7066                                                       | 0.7513                                                       | 0.7252 | 0.9039                                                       | 0.9146 | 0.4273                                                       | 0.4961                                                       | 0.5071 | 0.6305                                                       | 0.6584 |
+| 18                     | 0.7625                                                       | 0.7876                                                       | 0.7677 | 0.9186                                                       | 0.9356 | 0.4673                                                       | 0.5435                                                       | 0.5348 | 0.6818                                                       | 0.6925 |
+| 20                     | 0.7920                                                       | 0.8073                                                       | 0.8037 | 0.9341                                                       | 0.9516 | 0.5000                                                       | 0.5690                                                       | 0.5650 | 0.7095                                                       | 0.7289 |
 
 
 
