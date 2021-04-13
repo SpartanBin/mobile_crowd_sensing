@@ -322,7 +322,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         for _ in range(test_episode_times):
             done = False
             episode_time_cost = 0
-            episodes_grid_scores += [env.grid_weight]
+            episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
             timesteps_socre = []
             while not done:
                 new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
@@ -348,7 +348,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             episode_total_score = 1 - env.left_reward
             episodes_total_scores.append(episode_total_score)
             all_timesteps_socre.append(timesteps_socre)
-            episodes_got_scores += [env.episode_got_scores]
+            episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
             new_obs = env.reset()
         return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
 

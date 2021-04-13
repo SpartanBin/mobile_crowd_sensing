@@ -407,10 +407,10 @@ if __name__ == '__main__':
 
     import time
 
-    vehicle_num = 20
+    vehicle_num = 6
     env = generate_rectangle_network_action_destination_env(
-        height=30,
-        width=30,
+        height=20,
+        width=20,
         low_second=30,
         high_second=300,
         grid_height=2,
@@ -419,7 +419,7 @@ if __name__ == '__main__':
         left_reward_to_stop=0.01,
         episode_duration=3600,
         vehicle_num=vehicle_num,
-        seed=400,
+        seed=4000,
     )
     env.reset()
     ac_probs_dict = {}
@@ -427,8 +427,10 @@ if __name__ == '__main__':
         ac_probs_dict[i] = torch.tensor([0.25] * 4)
     st = time.time()
     episodes_total_scores = []
+    all_timesteps_socre = []
     for _ in range(100):
         done = False
+        timesteps_socre = []
         while not done:
             _, _, _, done, _ = env.step_by_action_probs(
                 ac_probs_dict=ac_probs_dict,
@@ -437,9 +439,14 @@ if __name__ == '__main__':
                 negative_constant_reward=0,
                 episode_time_cost=0,
             )
+            timesteps_socre.append(1 - env.left_reward)
+        all_timesteps_socre.append(timesteps_socre)
         episode_total_score = 1 - env.left_reward
         episodes_total_scores.append(episode_total_score)
         env.reset()
     print(np.mean(episodes_total_scores))
     et = time.time()
     # print(et - st)
+
+    mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
+    print(list(mean_ts_score))
