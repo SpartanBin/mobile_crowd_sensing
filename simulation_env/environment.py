@@ -6,6 +6,8 @@ import sys
 import os
 import math
 import random
+import time
+import pickle
 
 import torch
 
@@ -405,31 +407,47 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
 if __name__ == '__main__':
 
-    import time
-
-    vehicle_num = 6
+    vehicle_num = 18
+    height = 20
+    width = 20
+    grid_height = 2
+    grid_width = 2
     env = generate_rectangle_network_action_destination_env(
-        height=20,
-        width=20,
+        height=height,
+        width=width,
         low_second=30,
         high_second=300,
-        grid_height=2,
-        grid_width=2,
+        grid_height=grid_height,
+        grid_width=grid_width,
         action_interval=180,
         left_reward_to_stop=0.01,
-        episode_duration=3600,
+        episode_duration=7200,
         vehicle_num=vehicle_num,
         seed=4000,
     )
+
+    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+        env.experienced_travel_time = pickle.load(file)
+    # with open(project_path + '/experiment_results/bug_in_env(episode_grid_score=episode_grid_score+episode_got_score)/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
+    #         'rb') as file:
+    #     data = pickle.load(file)
+    # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
+    # episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
+    # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
+
     env.reset()
     ac_probs_dict = {}
     for i in range(vehicle_num):
         ac_probs_dict[i] = torch.tensor([0.25] * 4)
     st = time.time()
     episodes_total_scores = []
+    episodes_grid_scores = []
+    episodes_got_scores = []
     all_timesteps_socre = []
-    for _ in range(100):
+    for i in range(100):
         done = False
+        # env.grid_weight = episodes_grid_scores_[i]
+        episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
         timesteps_socre = []
         while not done:
             _, _, _, done, _ = env.step_by_action_probs(
@@ -443,10 +461,14 @@ if __name__ == '__main__':
         all_timesteps_socre.append(timesteps_socre)
         episode_total_score = 1 - env.left_reward
         episodes_total_scores.append(episode_total_score)
+        episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
         env.reset()
     print(np.mean(episodes_total_scores))
     et = time.time()
     # print(et - st)
 
-    mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
-    print(list(mean_ts_score))
+    # mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
+    # print(list(mean_ts_score))
+
+    # with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
+    #     pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)

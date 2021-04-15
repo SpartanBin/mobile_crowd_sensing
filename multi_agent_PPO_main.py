@@ -18,7 +18,7 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     left_reward_to_stop = 0.01
-    episode_duration = 3600
+    episode_duration = 7200
     vehicle_num = 6
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
@@ -78,40 +78,39 @@ if __name__ == '__main__':
         vehicle_num=vehicle_num,
         seed=seed,
     )
-    print(env.experienced_travel_time)
-    with open('experienced_travel_time.pickle', 'wb') as file:
-        pickle.dump(env.experienced_travel_time, file)
+    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+        env.experienced_travel_time = pickle.load(file)
 
-    # model = multi_agent_PPO(
-    #     env=env,
-    #     reward_type=reward_type,
-    #     cooperative_weight=cooperative_weight,
-    #     negative_constant_reward=negative_constant_reward,
-    #     vehicle_num=vehicle_num,
-    #     weight_shape=weight_shape,
-    #     share_policy=share_policy,
-    #     ortho_init=ortho_init,
-    #     conv_params=conv_params,
-    #     add_BN=add_BN,
-    #     output_dim=output_dim,
-    #     share_params=share_params,
-    #     action_dim=action_dim,
-    #     learning_rate=learning_rate,
-    #     n_steps=n_steps,
-    #     batch_size=batch_size,
-    #     n_epochs=n_epochs,
-    #     gamma=gamma,
-    #     gae_lambda=gae_lambda,
-    #     clip_range=clip_range,
-    #     clip_range_vf=clip_range_vf,
-    #     ent_coef=ent_coef,
-    #     vf_coef=vf_coef,
-    #     max_grad_norm=max_grad_norm,
-    #     target_kl=target_kl,
-    #     seed=seed,
-    #     device=device,
-    # )
-    # model.learn(
-    #     total_timesteps=1000000,
-    #     test_episode_times=100,
-    # )
+    model = multi_agent_PPO(
+        env=env,
+        reward_type=reward_type,
+        cooperative_weight=cooperative_weight,
+        negative_constant_reward=negative_constant_reward,
+        vehicle_num=vehicle_num,
+        weight_shape=weight_shape,
+        share_policy=share_policy,
+        ortho_init=ortho_init,
+        conv_params=conv_params,
+        add_BN=add_BN,
+        output_dim=output_dim,
+        share_params=share_params,
+        action_dim=action_dim,
+        learning_rate=learning_rate,
+        n_steps=n_steps,
+        batch_size=batch_size,
+        n_epochs=n_epochs,
+        gamma=gamma,
+        gae_lambda=gae_lambda,
+        clip_range=clip_range,
+        clip_range_vf=clip_range_vf,
+        ent_coef=ent_coef,
+        vf_coef=vf_coef,
+        max_grad_norm=max_grad_norm,
+        target_kl=target_kl,
+        seed=seed,
+        device=device,
+    )
+    model.learn(
+        total_timesteps=1000000,
+        test_episode_times=100,
+    )

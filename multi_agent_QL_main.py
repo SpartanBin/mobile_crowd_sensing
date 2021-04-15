@@ -54,7 +54,7 @@ if __name__ == '__main__':
     EPS_START = 0.9
     EPS_END = 0.05
     max_grad_norm = 0.5
-    device = 'cpu'
+    device = 'cuda'
     seed = 4000
 
     env = generate_rectangle_network_action_destination_env(
@@ -70,6 +70,8 @@ if __name__ == '__main__':
         vehicle_num=vehicle_num,
         seed=seed,
     )
+    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+        env.experienced_travel_time = pickle.load(file)
 
     model = multi_agent_QL(
         env=env,

@@ -62,6 +62,8 @@ if __name__ == '__main__':
         vehicle_num=vehicle_num,
         seed=seed,
     )
+    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+        env.experienced_travel_time = pickle.load(file)
 
     model = multi_agent_GA(
         env=env,

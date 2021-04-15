@@ -5,6 +5,7 @@ import copy
 import pickle
 
 import numpy as np
+import scipy.special as sps
 import torch
 from torch.nn import functional as F
 
@@ -352,6 +353,60 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             new_obs = env.reset()
         return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
 
+    @staticmethod
+    def discrete_gauss(height, width):
+        gd = np.zeros((height, width))
+        for i in range(len(gd)):
+            for j in range(len(gd[i])):
+                gd[i, j] = sps.comb(height - 1, i, exact=True) + sps.comb(width - 1, j, exact=True)
+        gd = np.float64(gd) / np.float64(gd).sum()
+        return gd
+
+    def test_on_GD(self, test_episode_times: int):
+        height = int(self.env.height / self.env.grid_height + 0.999999999999)
+        width = int(self.env.width / self.env.grid_width + 0.999999999999)
+        gd_score = self.discrete_gauss(height=height, width=width)
+        self.policy.eval()
+        env = copy.deepcopy(self.env)
+        new_obs = env.reset()
+        episodes_total_scores = []
+        episodes_grid_scores = []
+        episodes_got_scores = []
+        all_timesteps_socre = []
+        for _ in range(test_episode_times):
+            env.grid_weight = copy.deepcopy(gd_score)
+            done = False
+            episode_time_cost = 0
+            episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
+            timesteps_socre = []
+            while not done:
+                new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
+                new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
+                with torch.no_grad():
+                    loc_features = new_obs[0]
+                    weight_features = new_obs[1]
+                    distributions, _, _ = self.policy.forward(
+                        loc_features=loc_features,
+                        weight_features=weight_features,
+                    )
+                    # distributions, _, _ = self.policy.forward(
+                    #     loc_features=loc_features,
+                    #     weight_features=weight_features,
+                    #     number_of_seconds=None,
+                    # )
+                _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
+                    env=env,
+                    distributions=distributions,
+                    episode_time_cost=episode_time_cost,
+                )
+                timesteps_socre.append(1 - env.left_reward)
+            episode_total_score = 1 - env.left_reward
+            episodes_total_scores.append(episode_total_score)
+            all_timesteps_socre.append(timesteps_socre)
+            episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
+            new_obs = env.reset()
+        return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
+
     def save(self):
         self.best_state['best_episode'] = self.best_episode
         self.best_state['best_train_session'] = self.best_train_session
@@ -417,3 +472,9 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 break
 
         self.save()
+
+    def load_params(self, file_path):
+        with open(file_path, 'rb') as file:
+            state = pickle.load(file)
+        ACP_params = state['best_state']['policy_params']
+        self.policy.load_state_dict(ACP_params=ACP_params)
