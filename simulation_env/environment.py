@@ -407,7 +407,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
 if __name__ == '__main__':
 
-    vehicle_num = 18
+    vehicle_num = 6
     height = 20
     width = 20
     grid_height = 2
@@ -428,11 +428,11 @@ if __name__ == '__main__':
 
     with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
         env.experienced_travel_time = pickle.load(file)
-    # with open(project_path + '/experiment_results/bug_in_env(episode_grid_score=episode_grid_score+episode_got_score)/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
-    #         'rb') as file:
-    #     data = pickle.load(file)
+    with open(project_path + '/experiment_results/bug_in_env_episode_duration_2h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
+            'rb') as file:
+        data = pickle.load(file)
     # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
-    # episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
+    episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
     # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
 
     env.reset()
@@ -446,7 +446,7 @@ if __name__ == '__main__':
     all_timesteps_socre = []
     for i in range(100):
         done = False
-        # env.grid_weight = episodes_grid_scores_[i]
+        env.grid_weight = episodes_grid_scores_[i]
         episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
         timesteps_socre = []
         while not done:
@@ -463,12 +463,12 @@ if __name__ == '__main__':
         episodes_total_scores.append(episode_total_score)
         episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
         env.reset()
-    print(np.mean(episodes_total_scores))
+    # print(np.mean(episodes_total_scores))
     et = time.time()
     # print(et - st)
 
     # mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
     # print(list(mean_ts_score))
 
-    # with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
-    #     pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)
+    with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
+        pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)
