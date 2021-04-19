@@ -18,8 +18,8 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     left_reward_to_stop = 0.01
-    episode_duration = int(3600 * 3)
-    vehicle_num = 2
+    episode_duration = int(3600 * 4)
+    vehicle_num = 4
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'

@@ -421,14 +421,14 @@ if __name__ == '__main__':
         grid_width=grid_width,
         action_interval=180,
         left_reward_to_stop=0.01,
-        episode_duration=7200,
+        episode_duration=int(3600 * 4),
         vehicle_num=vehicle_num,
         seed=4000,
     )
 
     with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
         env.experienced_travel_time = pickle.load(file)
-    with open(project_path + '/experiment_results/bug_in_env_episode_duration_2h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
+    with open(project_path + '/experiment_results/bug_in_env_episode_duration_3h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
             'rb') as file:
         data = pickle.load(file)
     # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
@@ -463,7 +463,7 @@ if __name__ == '__main__':
         episodes_total_scores.append(episode_total_score)
         episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
         env.reset()
-    # print(np.mean(episodes_total_scores))
+    print(np.mean(episodes_total_scores))
     et = time.time()
     # print(et - st)
 
