@@ -30,7 +30,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             self, height: int, width: int, low_second: Union[int, float], high_second: Union[int, float],
             grid_height: int, grid_width: int, action_interval: Union[int, float],
             left_reward_to_stop: float, episode_duration: Union[int, float, None],
-            vehicle_num: int, seed: int,
+            link_weight_distribution: str, vehicle_num: int, seed: int,
     ):
         '''
         generate link matrix saving link relation between every network node, because of rectangle shape,
@@ -43,6 +43,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         :param grid_width: per grid width
         :param action_interval: seconds, every timestep's time interval
         :param episode_duration: seconds, episode duration time, if None, continuing until no reward
+        :param link_weight_distribution: now only support gaussian distribution and uniform distribution
         :param vehicle_num: the number of agent(vehicle) in this simulation environment
         :return:
         '''
@@ -75,7 +76,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             ])
             self.vehicle_action_paths.append(- 10000)
         self.vehicle_states = np.array(self.vehicle_states)
-        self.reset()
+        self.reset(link_weight_distribution=link_weight_distribution)
         self.episode_got_scores = np.zeros(self.grid_weight.shape)
         # self.generate_grid(
         #     grid_height=self.grid_height,
@@ -83,9 +84,11 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         # )
         # self.grid_weight_ = copy.deepcopy(self.grid_weight)
 
-    def reset(self):
+    def reset(self, link_weight_distribution: str):
         '''
         reset the agents(vehicles) position and grid link_weight(rewards)
+        :param link_weight_distribution: now only support gaussian distribution and uniform distribution
+        :return:
         '''
         self.past_time = 0
         coordinate_row = np.random.randint(low=0, high=self.height, size=self.vehicle_num)
@@ -99,6 +102,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         self.generate_grid(
             grid_height=self.grid_height,
             grid_width=self.grid_width,
+            link_weight_distribution=link_weight_distribution,
         )
         # self.grid_weight = copy.deepcopy(self.grid_weight_)
         self.cal_node_weight(
@@ -412,6 +416,7 @@ if __name__ == '__main__':
     width = 20
     grid_height = 2
     grid_width = 2
+    link_weight_distribution = 'UD'
     env = generate_rectangle_network_action_destination_env(
         height=height,
         width=width,
@@ -424,6 +429,7 @@ if __name__ == '__main__':
         episode_duration=int(3600 * 5),
         vehicle_num=vehicle_num,
         seed=4000,
+        link_weight_distribution=link_weight_distribution,
     )
 
     with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
@@ -435,7 +441,7 @@ if __name__ == '__main__':
     episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
     # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
 
-    env.reset()
+    env.reset(link_weight_distribution=link_weight_distribution)
     ac_probs_dict = {}
     for i in range(vehicle_num):
         ac_probs_dict[i] = torch.tensor([0.25] * 4)
@@ -462,7 +468,7 @@ if __name__ == '__main__':
         episode_total_score = 1 - env.left_reward
         episodes_total_scores.append(episode_total_score)
         episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
-        env.reset()
+        env.reset(link_weight_distribution=link_weight_distribution)
     print(np.mean(episodes_total_scores))
     et = time.time()
     # print(et - st)

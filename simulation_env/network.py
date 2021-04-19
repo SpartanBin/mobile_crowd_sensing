@@ -8,6 +8,7 @@ import copy
 from typing import Union
 
 import numpy as np
+import scipy.special as sps
 
 
 class generate_rectangle_network():
@@ -27,6 +28,7 @@ class generate_rectangle_network():
         self.width = width
         self.node = np.zeros((self.height, self.width))
         self.link_matrix = np.zeros((self.height * self.width, self.height * self.width))
+        self.stored_link_weight = {}
         for row in range(self.node.shape[0]):
             for col in range(self.node.shape[1]):
                 link_matrix_row = row * width + col
@@ -78,18 +80,44 @@ class generate_rectangle_network():
             self.experienced_travel_time.diagonal())
         self.experienced_travel_time[self.experienced_travel_time == 0] = float('inf')
 
-    def generate_grid(self, grid_height: int, grid_width: int):
+    def discrete_gaussian_distribution(self, grid_height, grid_width):
         '''
-        generate grid with random link_weight(rewards). Nodes in same grid share the same link_weight
+        generate link_weight(rewards) with gaussian distribution
         :param grid_height: per grid height
         :param grid_width: per grid width
         :return:
         '''
+        height = int(self.height / grid_height + 0.999999999999)
+        width = int(self.width / grid_width + 0.999999999999)
+        gd = np.zeros((height, width))
+        for i in range(len(gd)):
+            for j in range(len(gd[i])):
+                gd[i, j] = sps.comb(height - 1, i, exact=True) + sps.comb(width - 1, j, exact=True)
+        gd = np.float64(gd) / np.float64(gd).sum()
+        return gd
+
+    def generate_grid(self, grid_height: int, grid_width: int, link_weight_distribution: str):
+        '''
+        generate grid with random link_weight(rewards). Nodes in same grid share the same link_weight
+        :param grid_height: per grid height
+        :param grid_width: per grid width
+        :param link_weight_distribution: now only support gaussian distribution and uniform distribution
+        :return:
+        '''
+
+        if (grid_height, grid_width) not in self.stored_link_weight.keys():
+            self.stored_link_weight[(grid_height, grid_width)] = self.discrete_gaussian_distribution(
+                grid_height, grid_width)
+        link_weight_GD = copy.deepcopy(self.stored_link_weight[(grid_height, grid_width)])
+
         self.grid = np.ones((int(self.height / grid_height + 0.999999999999), int(
             self.width / grid_width + 0.999999999999)))
-        self.grid_weight = copy.deepcopy(self.grid)
-        index = np.where(self.grid_weight == 1)
-        self.grid_weight[index] = np.random.dirichlet(self.grid_weight[index], size=1)
+        if link_weight_distribution == 'GD':
+            self.grid_weight = link_weight_GD
+        else:
+            self.grid_weight = copy.deepcopy(self.grid)
+            index = np.where(self.grid_weight == 1)
+            self.grid_weight[index] = np.random.dirichlet(self.grid_weight[index], size=1)
 
     def cal_node_weight(self, grid_height: int, grid_width: int):
         '''

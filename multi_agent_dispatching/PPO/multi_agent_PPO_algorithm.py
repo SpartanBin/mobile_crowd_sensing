@@ -5,7 +5,6 @@ import copy
 import pickle
 
 import numpy as np
-import scipy.special as sps
 import torch
 from torch.nn import functional as F
 
@@ -113,7 +112,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         #     learning_rate=self.learning_rate,
         # ).to(self.device).eval()
 
-    def collect_rollouts(self):
+    def collect_rollouts(self, link_weight_distribution):
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
         The term rollout here refers to the model-free notion and should not
@@ -188,7 +187,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     ))
                 self.episode_time_cost = 0
                 self.select_action_time = 0
-                new_obs = self.env.reset()
+                new_obs = self.env.reset(link_weight_distribution=link_weight_distribution)
                 number_of_episode_timestep = 0
             new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
             new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
@@ -312,10 +311,10 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 print(f"Early stopping at step {epoch} due to reaching max kl: {np.mean(approx_kl_divs):.2f}")
                 break
 
-    def test(self, test_episode_times: int):
+    def test(self, test_episode_times: int, link_weight_distribution: str):
         self.policy.eval()
         env = copy.deepcopy(self.env)
-        new_obs = env.reset()
+        new_obs = env.reset(link_weight_distribution=link_weight_distribution)
         episodes_total_scores = []
         episodes_grid_scores = []
         episodes_got_scores = []
@@ -350,77 +349,27 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             episodes_total_scores.append(episode_total_score)
             all_timesteps_socre.append(timesteps_socre)
             episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
-            new_obs = env.reset()
+            new_obs = env.reset(link_weight_distribution=link_weight_distribution)
         return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
 
-    @staticmethod
-    def discrete_gauss(height, width):
-        gd = np.zeros((height, width))
-        for i in range(len(gd)):
-            for j in range(len(gd[i])):
-                gd[i, j] = sps.comb(height - 1, i, exact=True) + sps.comb(width - 1, j, exact=True)
-        gd = np.float64(gd) / np.float64(gd).sum()
-        return gd
-
-    def test_on_GD(self, test_episode_times: int):
-        height = int(self.env.height / self.env.grid_height + 0.999999999999)
-        width = int(self.env.width / self.env.grid_width + 0.999999999999)
-        gd_score = self.discrete_gauss(height=height, width=width)
-        self.policy.eval()
-        env = copy.deepcopy(self.env)
-        new_obs = env.reset()
-        episodes_total_scores = []
-        episodes_grid_scores = []
-        episodes_got_scores = []
-        all_timesteps_socre = []
-        for _ in range(test_episode_times):
-            env.grid_weight = copy.deepcopy(gd_score)
-            done = False
-            episode_time_cost = 0
-            episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
-            timesteps_socre = []
-            while not done:
-                new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
-                new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
-                with torch.no_grad():
-                    loc_features = new_obs[0]
-                    weight_features = new_obs[1]
-                    distributions, _, _ = self.policy.forward(
-                        loc_features=loc_features,
-                        weight_features=weight_features,
-                    )
-                    # distributions, _, _ = self.policy.forward(
-                    #     loc_features=loc_features,
-                    #     weight_features=weight_features,
-                    #     number_of_seconds=None,
-                    # )
-                _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
-                    env=env,
-                    distributions=distributions,
-                    episode_time_cost=episode_time_cost,
-                )
-                timesteps_socre.append(1 - env.left_reward)
-            episode_total_score = 1 - env.left_reward
-            episodes_total_scores.append(episode_total_score)
-            all_timesteps_socre.append(timesteps_socre)
-            episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
-            new_obs = env.reset()
-        return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
-
-    def save(self):
+    def save(self, train_link_weight_distribution, test_link_weight_distribution):
         self.best_state['best_episode'] = self.best_episode
         self.best_state['best_train_session'] = self.best_train_session
         self.best_state['random_policy_100_episodes_mean_total_score'] = \
             self.random_policy_100_episodes_mean_total_score
         self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
         self.test_state['best_state'] = self.best_state
-        with open('PPO_state_vehicle{}_env_{}_{}.pickle'.format(
-                self.vehicle_num, self.env.height, self.env.width), 'wb') as file:
+        with open('PPO_state_vehicle{}_env_{}_{}_ed_{}_trainD_{}_testD_{}.pickle'.format(
+                self.vehicle_num, self.env.height, self.env.width, self.env.episode_duration,
+                train_link_weight_distribution, test_link_weight_distribution
+        ), 'wb') as file:
             pickle.dump(self.test_state, file)
 
-    def learn(self, total_timesteps: int, test_episode_times: int):
+    def learn(self, total_timesteps: int, test_episode_times: int,
+              train_link_weight_distribution: str,
+              test_link_weight_distribution: str):
 
-        self.init_learn()
+        self.init_learn(train_link_weight_distribution=train_link_weight_distribution)
         self.random_policy_100_episodes_mean_total_score = 0
         self.cur_state = self.random_policy_100_episodes_mean_total_score
         self.best_state = {'test_100_episodes_mean_total_score': self.random_policy_100_episodes_mean_total_score,
@@ -432,7 +381,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         test_session = 0
         self.best_train_session = train_session
         while self.num_timesteps < total_timesteps:
-            need_test = self.collect_rollouts()
+            need_test = self.collect_rollouts(link_weight_distribution=train_link_weight_distribution)
             self.train()
             train_session += 1
             print('training successful in {}th training session'.format(train_session))
@@ -440,7 +389,9 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             #------------------------------------------test--------------------------------------------------
             test_session += 1
             self.cur_state, episodes_grid_scores, episodes_got_scores, all_timesteps_socre = self.test(
-                test_episode_times=test_episode_times)
+                test_episode_times=test_episode_times,
+                link_weight_distribution=test_link_weight_distribution,
+            )
 
             self.test_state[test_session] = {}
             self.test_state[test_session]['test_100_episodes_mean_total_score'] = self.cur_state
@@ -465,13 +416,19 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             '''.format(
                 test_session, self.episode, train_session, self.cur_state,
                 self.best_state['test_100_episodes_mean_total_score'], self.best_episode, self.best_train_session))
-            self.save()
+            self.save(
+                train_link_weight_distribution=train_link_weight_distribution,
+                test_link_weight_distribution=test_link_weight_distribution,
+            )
             # ------------------------------------------------------------------------------------------------
 
             if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 2:
                 break
 
-        self.save()
+        self.save(
+            train_link_weight_distribution=train_link_weight_distribution,
+            test_link_weight_distribution=test_link_weight_distribution,
+        )
 
     def load_params(self, file_path):
         with open(file_path, 'rb') as file:

@@ -18,8 +18,11 @@ if __name__ == '__main__':
     grid_width = 2
     action_interval = 180
     left_reward_to_stop = 0.01
-    episode_duration = int(3600 * 5)
+    episode_duration = int(3600 * 2)
     vehicle_num = 4
+
+    train_link_weight_distribution = 'GD'
+    test_link_weight_distribution = 'GD'
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
     reward_type = 'greedy'
@@ -75,6 +78,7 @@ if __name__ == '__main__':
         action_interval=action_interval,
         left_reward_to_stop=left_reward_to_stop,
         episode_duration=episode_duration,
+        link_weight_distribution=train_link_weight_distribution,
         vehicle_num=vehicle_num,
         seed=seed,
     )
@@ -113,4 +117,6 @@ if __name__ == '__main__':
     model.learn(
         total_timesteps=1000000,
         test_episode_times=100,
+        train_link_weight_distribution=train_link_weight_distribution,
+        test_link_weight_distribution=test_link_weight_distribution,
     )
