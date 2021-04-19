@@ -421,7 +421,7 @@ if __name__ == '__main__':
         grid_width=grid_width,
         action_interval=180,
         left_reward_to_stop=0.01,
-        episode_duration=int(3600 * 4),
+        episode_duration=int(3600 * 5),
         vehicle_num=vehicle_num,
         seed=4000,
     )
