@@ -434,7 +434,7 @@ if __name__ == '__main__':
 
     with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
         env.experienced_travel_time = pickle.load(file)
-    with open(project_path + '/experiment_results/bug_in_env_episode_duration_3h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
+    with open(project_path + '/experiment_results/bug_in_env_episode_duration_5h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
             'rb') as file:
         data = pickle.load(file)
     # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])

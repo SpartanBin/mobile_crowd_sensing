@@ -18,7 +18,7 @@
 
 #### reward
 
-- Environment has 20 * 20 / 4 number of grids. Every grid has random weight(reward). Sum of all grids' rewards is equal to 1. When reset environment, Every grid's weight is updated randomly and sum is also equal to 1.
+- Environment has 20 * 20 / 4 number of grids. Every grid has random weight(reward) with uniform distribution. Sum of all grids' rewards is equal to 1. When reset environment, Every grid's weight is updated randomly and sum is also equal to 1.
 - When a vehicle passes a grid, this grid's reward has been consumed.
 - Vehicles get the same reward when execute action to next timestep. For example, vehicle A arrives at grid A with 0.02 weight which has no vehicle arrived at, and vehicle B arrives at grid B with 0.003 weight which has no vehicle arrived at, environment returning 0.02 + 0.003 point as final reward for every vehicle.
 - Environment returning reward plus a constant negative value(- 0.05) as final reward.
@@ -622,10 +622,6 @@ same to experiment 7
 
 
 
-### discussion
-
-
-
 ## experiment 12: team_spirit
 
 
@@ -825,10 +821,6 @@ same to experiment 13
 
 
 
-### discussion
-
-
-
 ## experiment 15: DQL
 
 
@@ -874,10 +866,6 @@ same to experiment 14
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
 | 20                     |                                    |                                             |                                        |
-
-
-
-### discussion
 
 
 
@@ -932,7 +920,8 @@ same to experiment 15
 
 ### discussion
 
-As the number of vehicles increases, the effect becomes less effective.
+- As the number of vehicles increases, the effect becomes less effective.
+- Timer are not stable. Maybe model learn some spatial distribution of grid score to represent episode end state value (end signal).
 
 
 
@@ -984,10 +973,6 @@ same to experiment 14
 
 
 
-### discussion
-
-
-
 ## experiment 18: test a larger rectangular network in DQL
 
 
@@ -1032,10 +1017,6 @@ same to experiment 15
 | 12                     |                                    |                                             |                                        |
 | 16                     |                                    |                                             |                                        |
 | 20                     |                                    |                                             |                                        |
-
-
-
-### discussion
 
 
 
@@ -1085,6 +1066,102 @@ same to experiment 17 and 18
 
 
 ### discussion
+
+PPO are not always better than DQN (DQL).
+
+
+
+## experiment 20: try grid score with fixed Gaussian distribution
+
+
+
+### Environment
+
+same to experiment 19
+
+#### timestep
+
+same to experiment 19
+
+#### reward
+
+Try two types of training and testing method.
+
+- First: training on random grid score with uniform distribution (UD) and testing on fixed grid score with Gaussian distribution (GD).
+- Second: training on GD and testing on GD.
+
+#### state
+
+same to experiment 19
+
+#### action
+
+same to experiment 19
+
+
+
+### model
+
+same to experiment 17
+
+
+
+### result
+
+First reward type: PPO doesn't work as well as the random policy. 
+
+Second reward type: PPO works better than random policy. 
+
+![grid_score](./results_visualization/trainGD_testGD/grid_score.png)
+
+![got_score_PPO_4_episode_duration_4h](./results_visualization/trainGD_testGD/got_score_PPO_4_episode_duration_4h.png)
+
+![got_score_R_4_episode_duration_4h](./results_visualization/trainGD_testGD/got_score_R_4_episode_duration_4h.png)
+
+- The first chart shows the spatial distribution of the target grid score, the second chart shows the spatial distribution of the PPO got score, and the third chart shows that of the random policy. 
+- The calculation is done by taking the average of the 100 episode scores. 
+
+
+
+### discussion
+
+- The failure of the First reward type proved that the current method could not adapt to any spatial distribution of grid scores. Indeed, statistical learning methods are all about fitting the distribution of data. And if only train on the one distribution, the model has no ability to generalize to other distributions.
+
+
+
+## Phase summary 1
+
+
+
+### Bug
+
+A bug is not fixed that now environment selecting node is not the node happens not to be reachable.
+
+
+
+### Phenomenon and discussion
+
+- If we train and test under the condition that episode duration is 1-2 hours and the grid score distribution is uniform, by observing the spatial score distribution, we can find that the direction of vehicle dispatching is biased and always dispatches in a certain direction. This is especially true when the number of vehicles is small, and increasing episode duration can fix this problem.
+
+![grid_score_6](./results_visualization/episode_duration_2h_trainUD_testUD/grid_score_6.png)
+
+![got_score_PPO_6](./results_visualization/episode_duration_2h_trainUD_testUD/got_score_PPO_6.png)
+
+![got_score_R_6](./results_visualization/episode_duration_2h_trainUD_testUD/got_score_R_6.png)
+
+The first chart shows the spatial distribution of the target grid score, the second chart shows the spatial distribution of the PPO got score, and the third chart shows that of the random policy. And both are with 6 vehicles and 2 hours episode duration.
+
+- Like results of first reward type in experiment 20 show that only training on one distribution data cannot be transferred to another data distribution. If want to use on other distribution, must retrain. Or maybe there are some data generation distribution theories for training and make it can be transferred.
+
+
+
+### TODO
+
+- Fix bug firstly.
+- Input vehicle direction.
+- Input link matrix.
+- Find method for team work encouraged.
+- Exploring the Distribution Problem.
 
 
 
