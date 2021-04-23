@@ -175,6 +175,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
             cost=self.experienced_travel_time,
             start=start,
             start_time=start_time,
+            end_time=start_time + self.experienced_travel_time.max() + 60,
             node_length=len(ac_allowed),
         )
         for node in node_list:

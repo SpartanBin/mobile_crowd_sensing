@@ -10,6 +10,8 @@ import sys
 import os
 import heapq
 
+import numpy as np
+
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
 
@@ -32,7 +34,7 @@ class PriorityQueue:
         return heapq.heappop(self.elements)[1]
 
 
-def dijkstra_search(cost, start, start_time, node_length):
+def dijkstra_search(cost, start, start_time, end_time, node_length):
     frontier = PriorityQueue()
     frontier.put(start, 0)
     came_from = {}
@@ -45,16 +47,14 @@ def dijkstra_search(cost, start, start_time, node_length):
         current = frontier.get()
         
         if cost_so_far[current] > start_time:
-            if current not in node_list:
+            if current not in node_list and came_from[current] not in node_list:
                 node_list.append(current)
         
-        if len(node_list) >= node_length:
+        if len(node_list) >= node_length or cost_so_far[current] > end_time:
             break
-        
-        neighbor = []
-        for i in range(cost.shape[0]):
-            if cost[current, i] < float('inf'):
-                neighbor.append(i)
+
+        cost_ = cost[current]
+        neighbor = np.where(cost_ < float('inf'))[0].tolist()
                 
         for next in neighbor:
             new_cost = cost_so_far[current] + cost[current, next]
