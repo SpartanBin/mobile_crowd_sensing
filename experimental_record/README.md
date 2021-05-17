@@ -1186,7 +1186,8 @@ The first chart shows the spatial distribution of the target grid score, the sec
 - [x] Try DQL.
 - [x] Add timer to estimate state value.
 - [x] Test 30 * 30 nodes in PPO and DQN. 
-- [ ] Sets the node selected for the environment for the action to the node that happens not to be reachable. 
+- [x] Sets the node selected for the environment for the action to the node that happens not to be reachable. 
+- [ ] Optimize the code and optimize the new sparse objective function.
 - [ ] Add direction features to model. 
 - [ ] Try inputing link matrix using GNN. 
 - [ ] Try cooperative reward and global state value estimating. 
