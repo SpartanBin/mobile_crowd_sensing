@@ -24,7 +24,7 @@ class multi_agent():
             torch.backends.cudnn.deterministic = True
             torch.backends.cudnn.benchmark = False
 
-        self.num_timesteps = 0
+        self.num_episodes = 0
 
         self.env = env
 
@@ -57,17 +57,18 @@ class multi_agent():
 
     def init_learn(self, grid_weight):
 
-        self.num_timesteps = 0
         self.episode_time_cost = 0
         self.episode = 0
-        self.the_last_100_episodes_total_scores = []
-        self.last_100_episodes_mean_total_score = 0
-        self.the_best_last_100_episodes_mean_total_score = 0
-        self.the_best_100_episodes_total_scores = []
-        self.random_policy_100_episodes_mean_total_score = None
-        self._last_obs = self.env.reset(grid_weight=grid_weight)
-        self._last_obs[0] = self._last_obs[0].astype(np.float32).reshape((1, -1))
-        self._last_obs[1] = self._last_obs[1].astype(np.float32).reshape(
-            (1, 1,) + self._last_obs[1].shape)
+        self.the_last_100_episodes_rewards = []
+        self.last_100_episodes_mean_reward = - 10000000000000000000
+        self.the_best_last_100_episodes_mean_reward = - 10000000000000000000
+        self.the_best_100_episodes_rewards = []
+        self.random_policy_100_episodes_mean_reward = None
+        vehicle_states, node_weight, grid_cover, p, need_move = self.env.reset(grid_weight=grid_weight)
+        vehicle_states = vehicle_states.astype(np.float32).reshape((1, ) + vehicle_states.shape)
+        node_weight = node_weight.astype(np.float32).reshape((1, ) + node_weight.shape)
+        grid_cover = grid_cover.astype(np.float32).reshape((1,) + grid_cover.shape)
+        p = p.astype(np.float32).reshape((1,) + p.shape)
+        self._last_obs = [vehicle_states, node_weight, grid_cover, p, need_move]
         self._last_done = False
         self.select_action_time = 0

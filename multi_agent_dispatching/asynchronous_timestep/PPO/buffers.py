@@ -5,9 +5,10 @@ import numpy as np
 
 
 class RolloutBufferSamples(NamedTuple):
-    loc: np.ndarray
-    weight: np.ndarray
-    number_of_seconds: np.ndarray
+    vehicle_states: np.ndarray
+    node_weight: np.ndarray
+    grid_cover: np.ndarray
+    p: np.ndarray
     actions: np.ndarray
     old_values: np.ndarray
     old_log_prob: np.ndarray
@@ -75,6 +76,7 @@ class RolloutBuffer():
             self.log_probs.append([])
 
     def reset(self) -> None:
+
         for vehicle_id in range(self.vehicle_num):
             self.vehicle_states[vehicle_id] = []
             self.node_weight[vehicle_id] = []
@@ -88,30 +90,40 @@ class RolloutBuffer():
             self.values[vehicle_id] = []
             self.log_probs[vehicle_id] = []
 
+        self.vehicle_states_output = None
+        self.node_weight_output = None
+        self.grid_cover_output = None
+        self.p_output = None
+        self.actions_output = None
+        self.values_output = None
+        self.log_probs_output = None
+        self.advantages_output = None
+        self.returns_output = None
+
     def add(
-        self, obs: list, actions, reward, done, value, log_prob,
+        self, obs: list, actions, reward, done, values, log_probs,
     ) -> None:
         """
         :param obs: Observation, [0] is loc, [1] is weight
         :param actions: Action
         :param reward:
         :param done: End of episode signal.
-        :param value: estimated value of the current state
+        :param values: estimated value of the current state
             following the current policy.
-        :param log_prob: log probability of the action
+        :param log_probs: log probability of the action
             following the current policy.
         """
         vehicle_states, node_weight, grid_cover, p, need_move = obs
         for vehicle_id in need_move:
-            self.vehicle_states[vehicle_id].append(vehicle_states[[vehicle_id] + list(range(vehicle_id)) + list(
+            self.vehicle_states[vehicle_id].append(vehicle_states[:, [vehicle_id] + list(range(vehicle_id)) + list(
                 range(vehicle_id + 1, self.vehicle_num)), :].copy())
             self.node_weight[vehicle_id].append(node_weight.copy())
             self.grid_cover[vehicle_id].append(grid_cover.copy())
             self.p[vehicle_id].append(p.copy())
-            self.actions[vehicle_id].append(actions[vehicle_id].copy())
+            self.actions[vehicle_id].append(copy.deepcopy(actions[vehicle_id]))
             self.rewards[vehicle_id].append(copy.deepcopy(reward))
-            self.values[vehicle_id].append(value.copy())
-            self.log_probs[vehicle_id].append(log_prob[vehicle_id].copy())
+            self.values[vehicle_id].append(values[vehicle_id].copy())
+            self.log_probs[vehicle_id].append(log_probs[vehicle_id].copy())
         if done:
             for vehicle_id in range(self.vehicle_num):
                 episode_length = len(self.vehicle_states[vehicle_id]) - len(self.dones[vehicle_id])
@@ -132,7 +144,6 @@ class RolloutBuffer():
         :param done:
 
         """
-        # convert to numpy
         last_values = last_values.copy()
         done = np.array([done] * self.vehicle_num)
 
@@ -140,15 +151,17 @@ class RolloutBuffer():
             last_gae_lam = 0
             buffer_size = len(self.vehicle_states[vehicle_id])
 
-            self.vehicle_states[vehicle_id] = np.array(self.vehicle_states[vehicle_id])
-            self.node_weight[vehicle_id] = np.array(self.node_weight[vehicle_id])
-            self.grid_cover[vehicle_id] = np.array(self.grid_cover[vehicle_id])
-            self.p[vehicle_id] = np.array(self.p[vehicle_id])
-            self.actions[vehicle_id] = np.array(self.actions[vehicle_id])
-            self.dones[vehicle_id] = np.array(self.dones[vehicle_id])
-            self.rewards[vehicle_id] = np.array(self.rewards[vehicle_id])
-            self.values[vehicle_id] = np.array(self.values[vehicle_id])
-            self.log_probs[vehicle_id] = np.array(self.log_probs[vehicle_id])
+            self.vehicle_states[vehicle_id] = np.array(self.vehicle_states[vehicle_id]).squeeze()
+            self.node_weight[vehicle_id] = np.array(self.node_weight[vehicle_id]).squeeze()
+            self.grid_cover[vehicle_id] = np.array(self.grid_cover[vehicle_id]).squeeze()
+            self.p[vehicle_id] = np.array(self.p[vehicle_id]).squeeze()
+            self.actions[vehicle_id] = np.array(self.actions[vehicle_id]).squeeze()
+            episode_length = len(self.vehicle_states[vehicle_id]) - len(self.dones[vehicle_id])
+            self.dones[vehicle_id] += [False] * episode_length
+            self.dones[vehicle_id] = np.array(self.dones[vehicle_id]).squeeze()
+            self.rewards[vehicle_id] = np.array(self.rewards[vehicle_id]).squeeze()
+            self.values[vehicle_id] = np.array(self.values[vehicle_id]).squeeze()
+            self.log_probs[vehicle_id] = np.array(self.log_probs[vehicle_id]).squeeze()
 
             for step in reversed(range(buffer_size)):
                 if step == buffer_size - 1:
@@ -161,6 +174,7 @@ class RolloutBuffer():
                         self.values[vehicle_id][step]
                 last_gae_lam = delta + self.gamma * self.gae_lambda * next_non_terminal * last_gae_lam
                 self.advantages[vehicle_id].append(last_gae_lam)
+            self.advantages[vehicle_id] = np.array(self.advantages[vehicle_id]).squeeze()
             self.returns[vehicle_id] = self.advantages[vehicle_id] + self.values[vehicle_id]
 
     def copy_or_not(self, array: np.ndarray, copy: bool = True) -> np.ndarray:
@@ -178,39 +192,37 @@ class RolloutBuffer():
         return array
 
     def concat(self):
-        self.vehicle_states = np.vstack(self.vehicle_states)
-        self.node_weight = np.vstack(self.node_weight)
-        self.grid_cover = np.vstack(self.grid_cover)
-        self.p = np.vstack(self.p)
-        self.actions = np.vstack(self.actions)
-        self.values = np.vstack(self.values)
-        self.log_probs = np.vstack(self.log_probs)
-        self.advantages = np.vstack(self.advantages)
-        self.returns = np.vstack(self.returns)
+        self.vehicle_states_output = np.vstack(self.vehicle_states)
+        self.node_weight_output = np.vstack(self.node_weight)
+        self.grid_cover_output = np.vstack(self.grid_cover)
+        self.p_output = np.vstack(self.p)
+        self.actions_output = np.concatenate(self.actions, axis=0)
+        self.values_output = np.concatenate(self.values, axis=0)
+        self.log_probs_output = np.concatenate(self.log_probs, axis=0)
+        self.advantages_output = np.concatenate(self.advantages, axis=0)
+        self.returns_output = np.concatenate(self.returns, axis=0)
 
     def _get_samples(self, batch_inds: np.ndarray):
         data = (
-            self.vehicle_states[batch_inds],
-            self.node_weight[batch_inds],
-            self.grid_cover[batch_inds],
-            self.p[batch_inds],
-            self.actions[batch_inds],
-            self.values[batch_inds],
-            self.log_probs[batch_inds],
-            self.advantages[batch_inds],
-            self.returns[batch_inds],
+            self.vehicle_states_output[batch_inds],
+            self.node_weight_output[batch_inds],
+            self.grid_cover_output[batch_inds],
+            self.p_output[batch_inds],
+            self.actions_output[batch_inds],
+            self.values_output[batch_inds],
+            self.log_probs_output[batch_inds],
+            self.advantages_output[batch_inds],
+            self.returns_output[batch_inds],
         )
         return RolloutBufferSamples(*tuple(map(self.copy_or_not, data)))
 
-    def get(self, batch_size: Optional[int] = None):
-        assert type(self.vehicle_states) == np.ndarray, 'Must concat data.'
-        indices = np.random.permutation(len(self.vehicle_states))
+    def get(self, batch_size_proportion: Optional[int] = None):
 
-        # Return everything, don't create minibatches
-        if batch_size is None:
-            batch_size = len(self.vehicle_states)
+        indices = np.random.permutation(len(self.vehicle_states_output))
+
+        batch_size = int(len(self.vehicle_states_output) * batch_size_proportion + 1)
 
         start_idx = 0
-        while start_idx < len(self.vehicle_states):
+        while start_idx < len(self.vehicle_states_output):
             yield self._get_samples(indices[start_idx: start_idx + batch_size])
             start_idx += batch_size

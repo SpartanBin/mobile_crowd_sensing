@@ -4,27 +4,38 @@ import os
 project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(project_path)
 
-from simulation_environment.environment import *
-from multi_agent_dispatching.asynchronous_timestep.PPO.multi_agent_PPO_algorithm import *
+from simulation_env.environment import *
+from multi_agent_dispatching.PPO.multi_agent_PPO_algorithm import *
 
 
 if __name__ == '__main__':
 
     height = 20
     width = 20
-    ts_duration = 600
-    num_of_ts = 6 * 4
-    BETA = 0.5
-    vehicle_num = 2
+    low_second = 30
+    high_second = 300
+    grid_height = 2
+    grid_width = 2
+    action_interval = 180
+    left_reward_to_stop = 0.01
+    episode_duration = int(3600 * 2)
+    vehicle_num = 4
+
+    train_link_weight_distribution = 'GD'
+    test_link_weight_distribution = 'GD'
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
+    reward_type = 'greedy'
+    cooperative_weight = 1 / (vehicle_num * 1.5)
+    negative_constant_reward = 0
     weight_shape = height * width
+    share_policy = True
     ortho_init = True
     conv_params = [
         {
-            'in_channels': vehicle_num * 3 + 3,
+            'in_channels': 3,
             'out_channels': 64,
-            'kernel_size': 3,
+            'kernel_size': 5,
             'stride': 2,
             'padding': 2,
             'dilation': 1,
@@ -43,10 +54,10 @@ if __name__ == '__main__':
     share_params = False
     action_dim = 4
     learning_rate = 3e-4
-    buffer_size_episodes = 200
-    batch_size_proportion = 0.4
+    n_steps = 2048
+    batch_size = n_steps
     n_epochs = 10
-    gamma = 1  # In OpenAI Five, when set this to 0.99, policy performs best
+    gamma = 0.99  # In OpenAI Five, when set this to 0.99, policy performs best
     gae_lambda = 0.95
     clip_range = 0.2
     clip_range_vf = None
@@ -57,32 +68,31 @@ if __name__ == '__main__':
     device = 'cuda'
     seed = 4000
 
-    # generate network
-    experienced_travel_time, node_id_to_grid_id = generate_rectangle_network(
+    env = generate_rectangle_network_action_destination_env(
         height=height,
         width=width,
-        low_second=30,
-        high_second=300,
-        per_grid_height=2,
-        per_grid_width=2,
-        seed=seed,
-    )
-
-    # initial env
-    env = generate_asynchronous_timestep_environment(
-        experienced_travel_time=experienced_travel_time,
-        node_id_to_grid_id=node_id_to_grid_id,
-        ts_duration=ts_duration,
-        num_of_ts=num_of_ts,
-        BETA=BETA,
+        low_second=low_second,
+        high_second=high_second,
+        grid_height=grid_height,
+        grid_width=grid_width,
+        action_interval=action_interval,
+        left_reward_to_stop=left_reward_to_stop,
+        episode_duration=episode_duration,
+        link_weight_distribution=train_link_weight_distribution,
         vehicle_num=vehicle_num,
         seed=seed,
     )
+    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+        env.experienced_travel_time = pickle.load(file)
 
     model = multi_agent_PPO(
         env=env,
+        reward_type=reward_type,
+        cooperative_weight=cooperative_weight,
+        negative_constant_reward=negative_constant_reward,
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,
+        share_policy=share_policy,
         ortho_init=ortho_init,
         conv_params=conv_params,
         add_BN=add_BN,
@@ -90,8 +100,8 @@ if __name__ == '__main__':
         share_params=share_params,
         action_dim=action_dim,
         learning_rate=learning_rate,
-        buffer_size_episodes=buffer_size_episodes,
-        batch_size_proportion=batch_size_proportion,
+        n_steps=n_steps,
+        batch_size=batch_size,
         n_epochs=n_epochs,
         gamma=gamma,
         gae_lambda=gae_lambda,
@@ -105,7 +115,8 @@ if __name__ == '__main__':
         device=device,
     )
     model.learn(
-        total_episodes=10000,
+        total_timesteps=1000000,
         test_episode_times=100,
-        grid_weight=None,
+        train_link_weight_distribution=train_link_weight_distribution,
+        test_link_weight_distribution=test_link_weight_distribution,
     )

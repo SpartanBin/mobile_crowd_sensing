@@ -22,7 +22,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         env,
         vehicle_num: int,
         weight_shape: int,
-        share_policy: bool,
         ortho_init: bool,
         conv_params: Union[list, tuple],
         add_BN: bool,
@@ -30,8 +29,8 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         share_params: bool,
         action_dim: int,
         learning_rate: Union[float, int] = 3e-4,
-        n_steps: int = 2048,
-        batch_size: Optional[int] = 64,
+        buffer_size_episodes: int = 200,
+        batch_size_proportion: Optional[int] = 0.4,
         n_epochs: int = 10,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
@@ -54,11 +53,10 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
         self.learning_rate = learning_rate
 
-        self.n_steps = n_steps
+        self.buffer_size_episodes = buffer_size_episodes
         self.weight_shape = weight_shape
         self.gae_lambda = gae_lambda
         self.gamma = gamma
-        self.share_policy = share_policy
         self.ortho_init = ortho_init
         self.conv_params = conv_params
         self.add_BN = add_BN
@@ -69,7 +67,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.ent_coef = ent_coef
         self.vf_coef = vf_coef
         self.max_grad_norm = max_grad_norm
-        self.batch_size = batch_size
+        self.batch_size_proportion = batch_size_proportion
         self.n_epochs = n_epochs
         self.clip_range = clip_range
         self.clip_range_vf = clip_range_vf
@@ -84,7 +82,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         self.policy = policies.multi_agent_ACP(
             vehicle_num=self.vehicle_num,
             weight_shape=self.weight_shape,
-            share_policy=self.share_policy,
             ortho_init=self.ortho_init,
             conv_params=self.conv_params,
             add_BN=self.add_BN,
@@ -94,34 +91,101 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             learning_rate=self.learning_rate,
         ).to(self.device).eval()
 
-    def policy_model_predict(self, vehicle_states, node_weight, grid_cover, p, need_move, actions):
+    def transform_and_concat_all_features(
+            self, vehicle_states: np.ndarray, node_weight: np.ndarray,
+            grid_cover: np.ndarray, p: np.ndarray
+    ) -> torch.Tensor:
+        '''
+        :param vehicle_states: shape = (batch_size, self.vehicle_num, 3), the third dimension is the origin node, the
+        destination node and the remaining time to destination.
+        :param node_weight: shape = (batch_size, number_of_node)
+        :param grid_cover: shape = (batch_size, number_of_node)
+        :param p: shape = (batch_size, number_of_node)
+        :return: all_features, the tensor to input model directly
+        '''
+        batch_size = vehicle_states.shape[0]
+        node_num = node_weight.shape[1]
+        state_features = np.zeros((
+            batch_size, 3 * self.vehicle_num, node_num), dtype=np.float32)
+        # origin location
+        index0 = np.repeat(np.array(range(batch_size)), self.vehicle_num, axis=0)
+        index1 = np.repeat(np.array(range(0, state_features.shape[1], 3)).reshape(
+            (1, -1)), batch_size, axis=0).flatten()
+        index2 = vehicle_states[:, :, 0].flatten()
+        index = tuple(np.vstack((index0, index1, index2)).astype(int).tolist())
+        state_features[index] = 1
+        # destination location
+        index1 = np.repeat(np.array(range(1, state_features.shape[1], 3)).reshape(
+            (1, -1)), batch_size, axis=0).flatten()
+        index2 = vehicle_states[:, :, 1].flatten()
+        index = tuple(np.vstack((index0, index1, index2)).astype(int).tolist())
+        state_features[index] = 1
+        # remaining time to destination
+        index1 = range(2, state_features.shape[1], 3)
+        state_features[:, index1, :] = np.repeat(vehicle_states[:, :, 2].reshape((batch_size, self.vehicle_num, 1)),
+                                               repeats=node_num, axis=2)
+        # concat with node_weight, grid_cover and p
+        state_features = np.concatenate((
+            state_features,
+            node_weight.reshape((batch_size, 1, node_num)),
+            grid_cover.reshape((batch_size, 1, node_num)),
+            p.reshape((batch_size, 1, node_num))
+        ), axis=1)
+        state_features = torch.tensor(state_features, dtype=torch.float32, device=self.device)
+        return state_features
 
+    def policy_model_predict(self, vehicle_states: np.ndarray, node_weight: np.ndarray,
+            grid_cover: np.ndarray, p: np.ndarray, need_move: list, actions: Union[np.ndarray, None]):
+        '''
+        :param vehicle_states: shape = (batch_size, self.vehicle_num, 3), the third dimension is the origin node, the
+        destination node and the remaining time to destination.
+        :param node_weight: shape = (batch_size, number_of_node)
+        :param grid_cover: shape = (batch_size, number_of_node)
+        :param p: shape = (batch_size, number_of_node)
+        :param need_move:
+        :param actions: shape = (batch_size, )
+        :return:
+
+        the shape of values, log_probs, entropys = (batch_size, ).
+
+        distributions, values are dict. values' structure is {vehicle_id1: [x], vehicle_id2: [x]...}. distributions'
+        structure is {vehicle_id1: __main__.CategoricalDistribution object,
+        vehicle_id2: __main__.CategoricalDistribution object...}
+
+        '''
         if actions is not None:
-            self.policy.train()
-            values, log_prob, entropy = self.policy.forward(
+            actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device).long()
+            state_features = self.transform_and_concat_all_features(
                 vehicle_states=vehicle_states,
                 node_weight=node_weight,
                 grid_cover=grid_cover,
                 p=p,
+            )
+            self.policy.train()
+            values, log_probs, entropys = self.policy.forward(
+                state_features=state_features,
                 actions=actions,
             )
-            return values, log_prob, entropy
+            return values, log_probs, entropys
         else:
             self.policy.eval()
             distributions = {}
+            values = {}
             for vehicle_id in need_move:
-
-                vehicle_state = vehicle_states[[vehicle_id] + list(range(vehicle_id)) + list(range(
+                vehicle_state = vehicle_states[:, [vehicle_id] + list(range(vehicle_id)) + list(range(
                     vehicle_id + 1, self.vehicle_num)), :]
-
+                state_features = self.transform_and_concat_all_features(
+                    vehicle_states=vehicle_state,
+                    node_weight=node_weight,
+                    grid_cover=grid_cover,
+                    p=p,
+                )
                 with torch.no_grad():
-                    distributions[vehicle_id], values, _ = self.policy.forward(
-                        vehicle_states=vehicle_state,
-                        node_weight=node_weight,
-                        grid_cover=grid_cover,
-                        p=p,
-                        actions=actions,
+                    distributions[vehicle_id], value, _ = self.policy.forward(
+                        state_features=state_features,
+                        actions=None,
                     )
+                values[vehicle_id] = value.cpu().numpy()
             return distributions, values, None
 
     def collect_rollouts(self, grid_weight):
@@ -136,7 +200,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         done = False
         self.rollout_buffer.reset()
 
-        while episode < self.n_episodes:
+        while episode < self.buffer_size_episodes:
 
             vehicle_states, node_weight, grid_cover, p, need_move = self._last_obs
             distributions, values, _ = self.policy_model_predict(
@@ -147,7 +211,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 need_move=need_move,
                 actions=None,
             )
-            values = values.cpu().numpy()
 
             actions, log_probs, vehicle_states, node_weight, grid_cover, p, need_move, reward, done, \
             self.episode_time_cost = self.make_one_step_forward_for_env(
@@ -155,71 +218,73 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 distributions=distributions,
                 episode_time_cost=self.episode_time_cost,
             )
+            vehicle_states = vehicle_states.astype(np.float32).reshape((1,) + vehicle_states.shape)
+            node_weight = node_weight.astype(np.float32).reshape((1,) + node_weight.shape)
+            grid_cover = grid_cover.astype(np.float32).reshape((1,) + grid_cover.shape)
+            p = p.astype(np.float32).reshape((1,) + p.shape)
 
             if done:
-                # self.episode += 1
-                # episode_total_score = 1 - self.env.left_reward
-                # self.the_last_100_episodes_total_scores.append(episode_total_score)
-                # self.the_best_100_episodes_total_scores.append(episode_total_score)
-                # self.last_100_episodes_mean_total_score = np.mean(self.the_last_100_episodes_total_scores)
-                # if len(self.the_last_100_episodes_total_scores) > 100:
-                #     if self.last_100_episodes_mean_total_score > self.the_best_last_100_episodes_mean_total_score:
-                #         self.the_best_last_100_episodes_mean_total_score = self.last_100_episodes_mean_total_score
-                #         need_test = True
-                #     self.the_last_100_episodes_total_scores.pop(0)
-                #     self.the_best_100_episodes_total_scores.sort()
-                #     self.the_best_100_episodes_total_scores.pop(0)
-                # if self.episode % 100 == 0:
-                #     print('''
-                #     ******************************************************************************************************
-                #     in {}th episode, the number of vehicle is {}, reward_type is '{}',
-                #     cooperative_weight is {}, negative_constant_reward is {},
-                #     ------------------------------------------------------------------------------------------------------
-                #     episode_time_cost = {}, episode_total_score = {}, select_action_times = {},
-                #     random_policy_100_episodes_mean_total_score = {},
-                #     the_best_100_episodes_mean_total_score = {},
-                #     last_100_episodes_mean_total_score = {},
-                #     the_best_last_100_episodes_mean_total_score = {}
-                #     ******************************************************************************************************
-                #     '''.format(
-                #         self.episode, self.vehicle_num, self.reward_type, self.cooperative_weight,
-                #         self.negative_constant_reward, self.episode_time_cost, episode_total_score,
-                #         self.select_action_time, self.random_policy_100_episodes_mean_total_score,
-                #         np.mean(self.the_best_100_episodes_total_scores),
-                #         self.last_100_episodes_mean_total_score,
-                #         self.the_best_last_100_episodes_mean_total_score,
-                #     ))
-                # self.episode_time_cost = 0
-                # self.select_action_time = 0
-                vehicle_states, node_weight, grid_cover, p, need_move = self.env.reset(grid_weight=grid_weight)
-                self.num_episodes += 1
-                episode += 1
-                # number_of_episode_timestep = 0
-            new_obs = [vehicle_states, node_weight, grid_cover, p, need_move]  # 可能需要改shape和位数
+                self.the_last_100_episodes_rewards.append(reward)
+                self.the_best_100_episodes_rewards.append(reward)
+                self.last_100_episodes_mean_reward = np.mean(self.the_last_100_episodes_rewards)
+                if len(self.the_last_100_episodes_rewards) > 100:
+                    if self.last_100_episodes_mean_reward > self.the_best_last_100_episodes_mean_reward:
+                        self.the_best_last_100_episodes_mean_reward = self.last_100_episodes_mean_reward
+                        need_test = True
+                    self.the_last_100_episodes_rewards.pop(0)
+                    self.the_best_100_episodes_rewards.sort()
+                    self.the_best_100_episodes_rewards.pop(0)
+                if self.episode % 100 == 0:
+                    print('''
+                    ******************************************************************************************************
+                    in {}th episode, the number of vehicle is {}
+                    ------------------------------------------------------------------------------------------------------
+                    episode_time_cost = {}, episode_reward = {}, 
+                    random_policy_100_episodes_mean_reward = {},
+                    the_best_100_episodes_rewards = {},
+                    last_100_episodes_mean_reward = {},
+                    the_best_last_100_episodes_mean_reward = {}
+                    ******************************************************************************************************
+                    '''.format(
+                        self.episode, self.vehicle_num, self.episode_time_cost, reward,
+                        self.random_policy_100_episodes_mean_reward,
+                        np.mean(self.the_best_100_episodes_rewards),
+                        self.last_100_episodes_mean_reward,
+                        self.the_best_last_100_episodes_mean_reward,
+                    ))
+                self.episode_time_cost = 0
+                self.select_action_time = 0
 
-            # 注意，原本存的是上个timestep的done，这里done的逻辑应该改成，如果done了，生成一系列timestep的done，这里needmove也应该输入上个timesp的
+                if episode == self.buffer_size_episodes - 1:
+                    _, last_values, _ = self.policy_model_predict(
+                        vehicle_states=vehicle_states,
+                        node_weight=node_weight,
+                        grid_cover=grid_cover,
+                        p=p,
+                        need_move=list(range(self.vehicle_num)),
+                        actions=None,
+                    )
+
+                vehicle_states, node_weight, grid_cover, p, need_move = self.env.reset(grid_weight=grid_weight)
+                vehicle_states = vehicle_states.astype(np.float32).reshape((1,) + vehicle_states.shape)
+                node_weight = node_weight.astype(np.float32).reshape((1,) + node_weight.shape)
+                grid_cover = grid_cover.astype(np.float32).reshape((1,) + grid_cover.shape)
+                p = p.astype(np.float32).reshape((1,) + p.shape)
+                self.episode += 1
+                episode += 1
+            new_obs = [vehicle_states, node_weight, grid_cover, p, need_move]
+
             self.rollout_buffer.add(
                 obs=self._last_obs,
                 actions=actions,
                 reward=reward,
                 done=self._last_done,
-                value=values,
-                log_prob=log_probs)
+                values=values,
+                log_probs=log_probs)
             self._last_obs = new_obs
             self._last_done = done
 
-        vehicle_states, node_weight, grid_cover, p, need_move = self._last_obs
-        _, values, _ = self.policy_model_predict(
-            vehicle_states=vehicle_states,
-            node_weight=node_weight,
-            grid_cover=grid_cover,
-            p=p,
-            need_move=need_move,
-            actions=None,
-        )
-        values = values.cpu().numpy()
-
-        self.rollout_buffer.compute_returns_and_advantage(last_values=values, done=done)
+        self.rollout_buffer.compute_returns_and_advantage(last_values=last_values, done=done)
 
         return need_test
 
@@ -229,7 +294,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         """
         # Update optimizer learning rate
         for i in range(self.vehicle_num):
-            for param_group in self.policy.ACP[i].optimizer.param_groups:
+            for param_group in self.policy.ACP.optimizer.param_groups:
                 param_group["lr"] = self.learning_rate
         self.rollout_buffer.concat()
 
@@ -237,7 +302,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         for epoch in range(self.n_epochs):
             approx_kl_divs = []
             # Do a complete pass on the rollout buffer
-            for rollout_data in self.rollout_buffer.get(self.batch_size):
+            for rollout_data in self.rollout_buffer.get(self.batch_size_proportion):
 
                 # Re-sample the noise matrix because the log_std has changed
                 # if that line is commented (as in SAC)
@@ -247,7 +312,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     node_weight=rollout_data.node_weight,
                     grid_cover=rollout_data.grid_cover,
                     p=rollout_data.p,
-                    need_move=None,
+                    need_move=[],
                     actions=rollout_data.actions,
                 )
 
@@ -331,11 +396,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                         loc_features=loc_features,
                         weight_features=weight_features,
                     )
-                    # distributions, _, _ = self.policy.forward(
-                    #     loc_features=loc_features,
-                    #     weight_features=weight_features,
-                    #     number_of_seconds=None,
-                    # )
                 _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
                     env=env,
                     distributions=distributions,
@@ -349,20 +409,20 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             new_obs = env.reset(grid_weight=grid_weight)
         return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
 
-    def save(self, train_link_weight_distribution, test_link_weight_distribution):
-        self.best_state['best_episode'] = self.best_episode
-        self.best_state['best_train_session'] = self.best_train_session
-        self.best_state['random_policy_100_episodes_mean_total_score'] = \
-            self.random_policy_100_episodes_mean_total_score
-        self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
-        self.test_state['best_state'] = self.best_state
-        with open('PPO_state_vehicle{}_env_{}_{}_ed_{}_trainD_{}_testD_{}.pickle'.format(
-                self.vehicle_num, self.env.height, self.env.width, self.env.episode_duration,
-                train_link_weight_distribution, test_link_weight_distribution
-        ), 'wb') as file:
-            pickle.dump(self.test_state, file)
+    # def save(self, train_link_weight_distribution, test_link_weight_distribution):
+    #     self.best_state['best_episode'] = self.best_episode
+    #     self.best_state['best_train_session'] = self.best_train_session
+    #     self.best_state['random_policy_100_episodes_mean_total_score'] = \
+    #         self.random_policy_100_episodes_mean_total_score
+    #     self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
+    #     self.test_state['best_state'] = self.best_state
+    #     with open('PPO_state_vehicle{}_env_{}_{}_ed_{}_trainD_{}_testD_{}.pickle'.format(
+    #             self.vehicle_num, self.env.height, self.env.width, self.env.episode_duration,
+    #             train_link_weight_distribution, test_link_weight_distribution
+    #     ), 'wb') as file:
+    #         pickle.dump(self.test_state, file)
 
-    def learn(self, total_timesteps: int, test_episode_times: int, grid_weight):
+    def learn(self, total_episodes: int, test_episode_times: int, grid_weight):
 
         self.init_learn(grid_weight=grid_weight)
         self.random_policy_100_episodes_mean_total_score = 0
@@ -375,55 +435,62 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         train_session = 0
         test_session = 0
         self.best_train_session = train_session
-        while self.num_timesteps < total_timesteps:
+        while self.episode < total_episodes:
             need_test = self.collect_rollouts(grid_weight=grid_weight)
             self.train()
+            print("""
+            *************************************************************************
+            *************************************************************************
+            train successfully
+            *************************************************************************
+            *************************************************************************
+            """)
             train_session += 1
             print('training successful in {}th training session'.format(train_session))
 
-            #------------------------------------------test--------------------------------------------------
-            test_session += 1
-            self.cur_state, episodes_grid_scores, episodes_got_scores, all_timesteps_socre = self.test(
-                test_episode_times=test_episode_times,
-                grid_weight=grid_weight,
-            )
+            # #------------------------------------------test--------------------------------------------------
+            # test_session += 1
+            # self.cur_state, episodes_grid_scores, episodes_got_scores, all_timesteps_socre = self.test(
+            #     test_episode_times=test_episode_times,
+            #     grid_weight=grid_weight,
+            # )
+            #
+            # self.test_state[test_session] = {}
+            # self.test_state[test_session]['test_100_episodes_mean_total_score'] = self.cur_state
+            # self.test_state[test_session]['episodes_grid_scores'] = episodes_grid_scores
+            # self.test_state[test_session]['episodes_got_scores'] = episodes_got_scores
+            # self.test_state[test_session]['all_timesteps_socre'] = all_timesteps_socre
+            #
+            # if self.cur_state > self.best_state['test_100_episodes_mean_total_score']:
+            #     self.best_state['test_100_episodes_mean_total_score'] = self.cur_state
+            #     self.best_state['policy_params'] = self.policy.state_dict()
+            #     self.best_state['test_session'] = test_session
+            #     self.best_episode = self.episode
+            #     self.best_train_session = train_session
+            # print('''
+            # **------------------------------------------------------------------------------------------**
+            # **------------------------------------------------------------------------------------------**
+            # {}th test:
+            # now have been {}th episode, {}th training, current test 100_episodes_mean_total_score = {};
+            # best test 100_episodes_mean_total_score = {}, the result of {}th episode, {}th training is best
+            # **------------------------------------------------------------------------------------------**
+            # **------------------------------------------------------------------------------------------**
+            # '''.format(
+            #     test_session, self.episode, train_session, self.cur_state,
+            #     self.best_state['test_100_episodes_mean_total_score'], self.best_episode, self.best_train_session))
+            # # self.save(
+            # #     train_link_weight_distribution=train_link_weight_distribution,
+            # #     test_link_weight_distribution=test_link_weight_distribution,
+            # # )
+            # # ------------------------------------------------------------------------------------------------
 
-            self.test_state[test_session] = {}
-            self.test_state[test_session]['test_100_episodes_mean_total_score'] = self.cur_state
-            self.test_state[test_session]['episodes_grid_scores'] = episodes_grid_scores
-            self.test_state[test_session]['episodes_got_scores'] = episodes_got_scores
-            self.test_state[test_session]['all_timesteps_socre'] = all_timesteps_socre
+            # if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 2:
+            #     break
 
-            if self.cur_state > self.best_state['test_100_episodes_mean_total_score']:
-                self.best_state['test_100_episodes_mean_total_score'] = self.cur_state
-                self.best_state['policy_params'] = self.policy.state_dict()
-                self.best_state['test_session'] = test_session
-                self.best_episode = self.episode
-                self.best_train_session = train_session
-            print('''
-            **------------------------------------------------------------------------------------------**
-            **------------------------------------------------------------------------------------------**
-            {}th test: 
-            now have been {}th episode, {}th training, current test 100_episodes_mean_total_score = {}; 
-            best test 100_episodes_mean_total_score = {}, the result of {}th episode, {}th training is best
-            **------------------------------------------------------------------------------------------**
-            **------------------------------------------------------------------------------------------**
-            '''.format(
-                test_session, self.episode, train_session, self.cur_state,
-                self.best_state['test_100_episodes_mean_total_score'], self.best_episode, self.best_train_session))
-            self.save(
-                train_link_weight_distribution=train_link_weight_distribution,
-                test_link_weight_distribution=test_link_weight_distribution,
-            )
-            # ------------------------------------------------------------------------------------------------
-
-            if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 2:
-                break
-
-        self.save(
-            train_link_weight_distribution=train_link_weight_distribution,
-            test_link_weight_distribution=test_link_weight_distribution,
-        )
+        # self.save(
+        #     train_link_weight_distribution=train_link_weight_distribution,
+        #     test_link_weight_distribution=test_link_weight_distribution,
+        # )
 
     def load_params(self, file_path):
         with open(file_path, 'rb') as file:

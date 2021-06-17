@@ -23,6 +23,8 @@ class Conv1dExtractor(nn.Module):
 
         policy_conv_net = []
         value_conv_net = []
+        policy_conv_net.append(nn.BatchNorm1d(conv_params[0]['in_channels']))
+        value_conv_net.append(nn.BatchNorm1d(conv_params[0]['in_channels']))
         for layer_params in conv_params:
             policy_conv_net.append(nn.Conv1d(**layer_params))
             if add_BN:
@@ -232,7 +234,6 @@ class multi_agent_ACP():
             self,
             vehicle_num: int,
             weight_shape: int,
-            share_policy: bool,
             ortho_init: bool,
             conv_params: list,
             add_BN: bool,
@@ -247,7 +248,6 @@ class multi_agent_ACP():
         '''
 
         self.vehicle_num = vehicle_num
-        self.share_policy = share_policy
 
         conv_output_shape = weight_shape
         for params in conv_params:
@@ -280,31 +280,15 @@ class multi_agent_ACP():
         else:
             output_dim = [conv_output_shape * params['out_channels']] + output_dim
 
-        self.ACP = {}
-        for i in range(vehicle_num):
-            if i == 0:
-                self.ACP[i] = ActorCriticPolicy(
-                    ortho_init=ortho_init,
-                    conv_params=conv_params,
-                    add_BN=add_BN,
-                    output_dim=output_dim,
-                    share_params=share_params,
-                    action_dim=action_dim,
-                    learning_rate=learning_rate,
-                )
-            else:
-                if share_policy:
-                    self.ACP[i] = self.ACP[0]
-                else:
-                    self.ACP[i] = ActorCriticPolicy(
-                        ortho_init=ortho_init,
-                        conv_params=conv_params,
-                        add_BN=add_BN,
-                        output_dim=output_dim,
-                        share_params=share_params,
-                        action_dim=action_dim,
-                        learning_rate=learning_rate,
-                    )
+        self.ACP = ActorCriticPolicy(
+            ortho_init=ortho_init,
+            conv_params=conv_params,
+            add_BN=add_BN,
+            output_dim=output_dim,
+            share_params=share_params,
+            action_dim=action_dim,
+            learning_rate=learning_rate,
+        )
 
         self.device = torch.device('cpu')
 
@@ -318,8 +302,7 @@ class multi_agent_ACP():
             return int((input_shape + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
 
     def to(self, param):
-        for i in range(self.vehicle_num):
-            self.ACP[i].to(param)
+        self.ACP.to(param)
         if param == 'cuda':
             self.device = torch.device('cuda')
         elif param == torch.device('cuda'):
@@ -331,94 +314,47 @@ class multi_agent_ACP():
         return self
 
     def train(self):
-        for i in range(self.vehicle_num):
-            self.ACP[i].train()
+        self.ACP.train()
         return self
 
     def eval(self):
-        for i in range(self.vehicle_num):
-            self.ACP[i].eval()
+        self.ACP.eval()
         return self
 
     def state_dict(self):
-        ACP_params = {}
-        for key in self.ACP.keys():
-            if (self.share_policy and key == 0) or (not self.share_policy):
-                ACP_params[key] = self.ACP[key].state_dict()
+        ACP_params = self.ACP.state_dict()
         return ACP_params
 
     def load_state_dict(self, ACP_params):
-        for key in self.ACP.keys():
-            if (self.share_policy and key == 0) or (not self.share_policy):
-                self.ACP[key].load_state_dict(ACP_params[key])
+        self.ACP.load_state_dict(ACP_params)
 
     def optimize(self, loss: torch.Tensor, max_grad_norm):
 
-        if self.share_policy:
-            self.ACP[0].optimizer.zero_grad()
-        else:
-            for i in range(self.vehicle_num):
-                self.ACP[i].optimizer.zero_grad()
+        self.ACP.optimizer.zero_grad()
         loss.backward()
-        if self.share_policy:
-            # Clip grad norm
-            torch.nn.utils.clip_grad_norm_(self.ACP[0].parameters(), max_grad_norm)
-            self.ACP[0].optimizer.step()
-        else:
-            for i in range(self.vehicle_num):
-                # Clip grad norm
-                torch.nn.utils.clip_grad_norm_(self.ACP[i].parameters(), max_grad_norm)
-                self.ACP[i].optimizer.step()
+        # Clip grad norm
+        torch.nn.utils.clip_grad_norm_(self.ACP.parameters(), max_grad_norm)
+        self.ACP.optimizer.step()
 
     def forward(
             self,
-            loc_features: np.ndarray,
-            weight_features: np.ndarray,
-            actions: Union[np.ndarray, None] = None):
+            state_features: torch.Tensor,
+            actions: Union[torch.Tensor, None] = None,
+        ):
         """
         Forward pass in all the networks (actor and critic)
 
-        :param loc_features:
-        :param weight_features:
-        :return: action, value and log probability of the action
+        :param state_features: shape = (batch_size, self.vehicle_num * 3 + 3, num_of_nodes)
+        :param actions:
+        :return:
         """
-        loc_features = loc_features.reshape((loc_features.shape[0], -1, 1))
-        index1 = np.repeat(np.array(range(loc_features.shape[0])), self.vehicle_num * 2, axis=0)
-        index2 = np.array([0] * len(index1))
-        index3 = loc_features[:, :, 0].flatten()
-        index = np.vstack((index1, index2, index3))
-        input_all_loc_features = torch.zeros(weight_features.shape, dtype=torch.float32, device=self.device)
-        input_all_loc_features[index] = 1
 
-        weight_features = torch.as_tensor(weight_features, dtype=torch.float32, device=self.device)
-        if actions is not None:
-            actions = torch.as_tensor(actions, dtype=torch.float32, device=self.device).long()
-
-        values = []
-        distributions = []
-        log_probs = []
-        entropys = []
-        for i in range(self.vehicle_num):
-            vehicle_index = index[:, list(range(i, index.shape[1], self.vehicle_num * 2)) +
-                                     list(range(i + 1, index.shape[1], self.vehicle_num * 2))]
-            input_loc_features = torch.zeros(weight_features.shape, dtype=torch.float32, device=self.device)
-            input_loc_features[vehicle_index] = 1
-            input_features = torch.cat((input_loc_features, input_all_loc_features, weight_features), dim=1)
-            if actions is None:
-                distribution, value, _ = self.ACP[i](input_features, None)
-                distributions.append(distribution)
-            else:
-                value, log_prob, entropy = self.ACP[i](input_features, actions[:, i])
-                log_probs.append(log_prob.view(log_prob.shape + (1,)))
-                entropys.append(entropy.view(log_prob.shape + (1,)))
-            values.append(value)
-        values = torch.cat(values, dim=1)
         if actions is None:
-            return distributions, values, None
+            distribution, value, _ = self.ACP(state_features, None)
+            return distribution, value.flatten(), None
         else:
-            log_probs = torch.cat(log_probs, dim=1)
-            entropys = torch.cat(entropys, dim=1)
-            return values, log_probs, entropys
+            values, log_probs, entropys = self.ACP(state_features, actions)
+            return values.flatten(), log_probs, entropys
 
 
 if __name__ == '__main__':
@@ -426,8 +362,8 @@ if __name__ == '__main__':
     vehicle_num = 50
     weight_shape = 20 * 20
     conv_params = [{
-        'in_channels': 3,
-        'out_channels': 1,
+        'in_channels': vehicle_num * 3 + 3,
+        'out_channels': 40,
         'kernel_size': 3,
         'stride': 2,
         'padding': 1,
@@ -437,7 +373,6 @@ if __name__ == '__main__':
     maacp = multi_agent_ACP(
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,
-        share_policy=True,
         ortho_init=True,
         conv_params=conv_params,
         add_BN=True,
@@ -449,29 +384,22 @@ if __name__ == '__main__':
 
     # test decision making
     bacth_size = 1
-    loc_features = np.random.rand(bacth_size, vehicle_num * 2)
-    weight_features = np.random.rand(bacth_size, 1, weight_shape)
+    state_features = torch.rand((bacth_size, vehicle_num * 3 + 3, weight_shape), dtype=torch.float32)
     actions = None
-    distributions, values, _ = maacp.forward(
-        loc_features=loc_features,
-        weight_features=weight_features,
+    distribution, value, _ = maacp.forward(
+        state_features=state_features,
         actions=actions,
     )
-    print(distributions)
-    print(distributions[0].get_actions())
-    print(distributions[1].get_actions())
-    print(distributions[1].all_probs())
-    print(values)
+    print(distribution)
+    print(value)
 
     # test action probs
-    bacth_size = 100
-    loc_features = np.random.rand(bacth_size, vehicle_num * 2)
-    weight_features = np.random.rand(bacth_size, 1, weight_shape)
-    actions = np.random.randint(low=0, high=4, size=(bacth_size, vehicle_num))
+    bacth_size = 2
+    state_features = torch.rand((bacth_size, vehicle_num * 3 + 3, weight_shape), dtype=torch.float32)
+    actions = torch.randint(low=0, high=4, size=(bacth_size, ))
     print(actions)
     values, log_probs, entropys = maacp.forward(
-        loc_features=loc_features,
-        weight_features=weight_features,
+        state_features=state_features,
         actions=actions,
     )
     print(values)
