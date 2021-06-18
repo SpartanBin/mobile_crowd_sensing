@@ -287,7 +287,7 @@ if __name__ == '__main__':
 
     # initial env
     ts_duration = 600
-    num_of_ts = 10
+    num_of_ts = 2
     BETA = 0.5
     vehicle_num = 2
     env = generate_asynchronous_timestep_environment(
