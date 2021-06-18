@@ -105,7 +105,7 @@ if __name__ == '__main__':
         device=device,
     )
     model.learn(
-        total_episodes=10000,
+        total_episodes=100000,
         test_episode_times=100,
         grid_weight=None,
     )
