@@ -1,11 +1,11 @@
 import sys
 import os
 
-project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(project_path)
 
 from simulation_environment.environment import *
-from multi_agent_dispatching.asynchronous_timestep.PPO.multi_agent_PPO_algorithm import *
+from multi_agent_dispatching.asynchronous_timestep.QL.multi_agent_QL_algorithm import *
 
 
 if __name__ == '__main__':
@@ -16,10 +16,14 @@ if __name__ == '__main__':
     num_of_ts = 6 * 12
     BETA = 0.5
     vehicle_num = 2
+    num_episodes = 100000
 
     # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
+    reward_type = 'greedy'
+    cooperative_weight = 1 / (vehicle_num * 1.5)
+    negative_constant_reward = 0
     weight_shape = height * width
-    ortho_init = True
+    share_policy = True
     conv_params = [
         {
             'in_channels': vehicle_num * 3 + 3,
@@ -40,20 +44,12 @@ if __name__ == '__main__':
     ]
     add_BN = True
     output_dim = [64, 32]
-    share_params = False
     action_dim = height * width
-    learning_rate = 3e-4
-    buffer_size_episodes = 200
-    batch_size_proportion = 0.4
-    n_epochs = 10
-    gamma = 1  # In OpenAI Five, when set this to 0.99, policy performs best
-    gae_lambda = 0.95
-    clip_range = 0.2
-    clip_range_vf = None
-    ent_coef = 0.01  # In OpenAI Five, when set this to 0.01, policy performs best
-    vf_coef = 0.5
+    learning_rate = 0.001
+    gamma = 1
+    EPS_START = 0.9
+    EPS_END = 0.05
     max_grad_norm = 0.5
-    target_kl = None
     device = 'cuda'
     seed = 4000
 
@@ -79,33 +75,24 @@ if __name__ == '__main__':
         seed=seed,
     )
 
-    model = multi_agent_PPO(
+    model = multi_agent_QL(
         env=env,
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,
-        ortho_init=ortho_init,
         conv_params=conv_params,
         add_BN=add_BN,
         output_dim=output_dim,
-        share_params=share_params,
         action_dim=action_dim,
         learning_rate=learning_rate,
-        buffer_size_episodes=buffer_size_episodes,
-        batch_size_proportion=batch_size_proportion,
-        n_epochs=n_epochs,
         gamma=gamma,
-        gae_lambda=gae_lambda,
-        clip_range=clip_range,
-        clip_range_vf=clip_range_vf,
-        ent_coef=ent_coef,
-        vf_coef=vf_coef,
+        EPS_START=EPS_START,
+        EPS_END=EPS_END,
+        EPS_DECAY=num_episodes / 4,
         max_grad_norm=max_grad_norm,
-        target_kl=target_kl,
         seed=seed,
         device=device,
     )
     model.learn(
-        total_episodes=10000,
-        test_episode_times=100,
+        num_episodes=num_episodes,
         grid_weight=None,
     )

@@ -357,6 +357,164 @@ class multi_agent_ACP():
             return values.flatten(), log_probs, entropys
 
 
+class QLearningPolicy(nn.Module):
+
+    def __init__(
+        self,
+        conv_params: list,
+        add_BN: bool,
+        output_dim: list,
+        action_dim: int,
+        learning_rate: Union[int, float],
+    ):
+        '''
+        :param conv_params: type of item in iteration must be dict object, and dict keys are Conv layer
+        param names, key values are allowed param values
+        :param add_BN:
+        :param output_dim: type of item in iteration must be int object
+        :param action_dim:
+        :param learning_rate:
+        :return:
+        '''
+        super(QLearningPolicy, self).__init__()
+
+        self.extractor = Conv1dExtractor(
+            conv_params=conv_params,
+            add_BN=add_BN,
+            output_dim=output_dim,
+            share_params=True,
+        )
+        self.value_net = nn.Linear(output_dim[-1], action_dim)
+
+        # Setup optimizer with initial learning rate
+        self.optimizer = torch.optim.Adam(self.parameters(), lr=learning_rate, eps=1e-5)
+
+    def forward(self, state_features: torch.Tensor):
+        """
+        Forward pass in network
+
+        :param state_features:
+        :return:
+        """
+        latent_vf, _ = self.extractor(state_features)
+        values = self.value_net(latent_vf)
+        return values
+
+
+class multi_agent_QLP():
+
+    def __init__(
+            self,
+            vehicle_num: int,
+            weight_shape: int,
+            conv_params: list,
+            add_BN: bool,
+            output_dim: list,
+            action_dim: int,
+            learning_rate: Union[int, float]):
+        '''
+        :param conv_params: with input layer params
+        :param output_dim: without input dim
+        :return:
+        '''
+
+        self.vehicle_num = vehicle_num
+
+        conv_output_shape = weight_shape
+        for params in conv_params:
+            if 'padding' not in params:
+                if type(conv_output_shape) == tuple:
+                    params['padding'] = (0, 0)
+                else:
+                    params['padding'] = 0
+            if 'dilation' not in params:
+                if type(conv_output_shape) == tuple:
+                    params['dilation'] = (1, 1)
+                else:
+                    params['dilation'] = 1
+            if 'stride' not in params:
+                if type(conv_output_shape) == tuple:
+                    params['stride'] = (1, 1)
+                else:
+                    params['stride'] = 1
+            conv_output_shape = self.cal_conv_output_shape(
+                input_shape=conv_output_shape,
+                kernel_size=params['kernel_size'],
+                padding=params['padding'],
+                dilation=params['dilation'],
+                stride=params['stride'],
+            )
+        params = conv_params[-1]
+        if type(conv_output_shape) == tuple:
+            output_dim = [conv_output_shape[0] * conv_output_shape[1] *
+                          params['out_channels']] + output_dim
+        else:
+            output_dim = [conv_output_shape * params['out_channels']] + output_dim
+
+        self.QLP = QLearningPolicy(
+            conv_params=conv_params,
+            add_BN=add_BN,
+            output_dim=output_dim,
+            action_dim=action_dim,
+            learning_rate=learning_rate,
+        )
+
+        self.device = torch.device('cpu')
+
+    @staticmethod
+    def cal_conv_output_shape(input_shape, kernel_size, padding, dilation, stride):
+        if type(input_shape) == tuple:
+            row = int((input_shape[0] + 2 * padding[0] - dilation[0] * (kernel_size[0] - 1) - 1) / stride[0] + 1)
+            col = int((input_shape[1] + 2 * padding[1] - dilation[1] * (kernel_size[1] - 1) - 1) / stride[1] + 1)
+            return (row, col)
+        else:
+            return int((input_shape + 2 * padding - dilation * (kernel_size - 1) - 1) / stride + 1)
+
+    def to(self, param):
+        self.QLP.to(param)
+        if param == 'cuda':
+            self.device = torch.device('cuda')
+        elif param == torch.device('cuda'):
+            self.device = torch.device('cuda')
+        elif param == 'cpu':
+            self.device = torch.device('cpu')
+        elif param == torch.device('cpu'):
+            self.device = torch.device('cpu')
+        return self
+
+    def train(self):
+        self.QLP.train()
+        return self
+
+    def eval(self):
+        self.QLP.eval()
+        return self
+
+    def state_dict(self):
+        QLP_params = self.QLP.state_dict()
+        return QLP_params
+
+    def load_state_dict(self, QLP_params):
+        self.QLP.load_state_dict(QLP_params)
+
+    def optimize(self, loss: torch.Tensor, max_grad_norm):
+        self.QLP.optimizer.zero_grad()
+        loss.backward()
+        # Clip grad norm
+        torch.nn.utils.clip_grad_norm_(self.QLP.parameters(), max_grad_norm)
+        self.QLP.optimizer.step()
+
+    def forward(self, state_features: torch.Tensor):
+        """
+        Forward pass in network
+
+        :param state_features: shape = (batch_size, self.vehicle_num * 3 + 3, num_of_nodes)
+        :return:
+        """
+        values = self.QLP(state_features)
+        return values
+
+
 if __name__ == '__main__':
 
     vehicle_num = 50
@@ -370,6 +528,7 @@ if __name__ == '__main__':
         'dilation': 1,
     }]
 
+    # PPO
     maacp = multi_agent_ACP(
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,
@@ -382,26 +541,45 @@ if __name__ == '__main__':
         learning_rate=0.00001
     )
 
-    # test decision making
-    bacth_size = 1
-    state_features = torch.rand((bacth_size, vehicle_num * 3 + 3, weight_shape), dtype=torch.float32)
-    actions = None
-    distribution, value, _ = maacp.forward(
-        state_features=state_features,
-        actions=actions,
-    )
-    print(distribution)
-    print(value)
+    # # test decision making
+    # bacth_size = 1
+    # state_features = torch.rand((bacth_size, vehicle_num * 3 + 3, weight_shape), dtype=torch.float32)
+    # actions = None
+    # distribution, value, _ = maacp.forward(
+    #     state_features=state_features,
+    #     actions=actions,
+    # )
+    # print(distribution)
+    # print(value)
+    #
+    # # test action probs
+    # bacth_size = 2
+    # state_features = torch.rand((bacth_size, vehicle_num * 3 + 3, weight_shape), dtype=torch.float32)
+    # actions = torch.randint(low=0, high=4, size=(bacth_size, ))
+    # print(actions)
+    # values, log_probs, entropys = maacp.forward(
+    #     state_features=state_features,
+    #     actions=actions,
+    # )
+    # print(values)
+    # print(log_probs)
+    # print(entropys)
 
-    # test action probs
-    bacth_size = 2
+    # DQN
+    maql = multi_agent_QLP(
+        vehicle_num=vehicle_num,
+        weight_shape=weight_shape,
+        conv_params=conv_params,
+        add_BN=True,
+        output_dim=[32],
+        action_dim=4,
+        learning_rate=0.00001
+    )
+
+    # test decision making
+    bacth_size = 4
     state_features = torch.rand((bacth_size, vehicle_num * 3 + 3, weight_shape), dtype=torch.float32)
-    actions = torch.randint(low=0, high=4, size=(bacth_size, ))
-    print(actions)
-    values, log_probs, entropys = maacp.forward(
+    values = maql.forward(
         state_features=state_features,
-        actions=actions,
     )
     print(values)
-    print(log_probs)
-    print(entropys)
