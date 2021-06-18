@@ -124,6 +124,9 @@ class RolloutBuffer():
             self.rewards[vehicle_id].append(copy.deepcopy(reward))
             self.values[vehicle_id].append(values[vehicle_id].copy())
             self.log_probs[vehicle_id].append(log_probs[vehicle_id].copy())
+        if reward != 0:
+            for vehicle_id in range(self.vehicle_num):
+                self.rewards[vehicle_id][-1] = reward
         if done:
             for vehicle_id in range(self.vehicle_num):
                 episode_length = len(self.vehicle_states[vehicle_id]) - len(self.dones[vehicle_id])
