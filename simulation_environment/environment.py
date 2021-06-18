@@ -177,10 +177,6 @@ class generate_asynchronous_timestep_environment():
 
         return vehicle_states, node_weight, grid_cover, p, need_move
 
-    def return_allowed_action(self, node_id):
-        ac_allowed = set(range(len(self.node_allowed_action[node_id])))
-        return ac_allowed
-
     def execute_action(self, actions: dict, episode_time_cost):
         '''
 
@@ -193,7 +189,7 @@ class generate_asynchronous_timestep_environment():
         for vehicle_id in actions.keys():
             action = actions[vehicle_id]
             vehicle_origin = self.vehicle_states[vehicle_id, 0]
-            self.vehicle_states[vehicle_id, 1] = self.node_allowed_action[vehicle_origin][action]
+            self.vehicle_states[vehicle_id, 1] = action
             vehicle_destination = self.vehicle_states[vehicle_id, 1]
             self.vehicle_states[vehicle_id, 2] = self.experienced_travel_time[vehicle_origin, vehicle_destination]
 
@@ -262,7 +258,7 @@ class generate_asynchronous_timestep_environment():
 
         actions = {}
         for i in ac_probs_dict.keys():
-            ac_allowed = list(self.return_allowed_action(node_id=self.vehicle_states[i, 1]))
+            ac_allowed = self.node_allowed_action[self.vehicle_states[i, 1]]
             actions[i] = ac_allowed[torch.multinomial(ac_probs_dict[i][ac_allowed], num_samples=1).item()]
 
         vehicle_states, node_weight, grid_cover, p, need_move, reward, done, episode_time_cost = self.execute_action(
@@ -277,13 +273,15 @@ if __name__ == '__main__':
 
     # generate network
     seed = 4000
+    height = 20
+    width = 20
     experienced_travel_time, node_id_to_grid_id = generate_rectangle_network(
-        height=10,
-        width=15,
+        height=height,
+        width=width,
         low_second=30,
         high_second=300,
-        per_grid_height=3,
-        per_grid_width=4,
+        per_grid_height=2,
+        per_grid_width=2,
         seed=seed,
     )
 
@@ -309,7 +307,7 @@ if __name__ == '__main__':
     # env forward
     ac_probs_dict = {}
     for vehicle_id in range(vehicle_num):
-        ac_probs_dict[vehicle_id] = torch.tensor([0.25] * 4)
+        ac_probs_dict[vehicle_id] = torch.tensor([1 / (height * width)] * (height * width))
     st = time.time()
     for episode in range(100):
         done = False

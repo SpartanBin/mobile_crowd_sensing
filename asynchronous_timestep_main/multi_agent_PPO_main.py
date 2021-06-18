@@ -41,7 +41,7 @@ if __name__ == '__main__':
     add_BN = True
     output_dim = [64, 32]
     share_params = False
-    action_dim = 4
+    action_dim = height * width
     learning_rate = 3e-4
     buffer_size_episodes = 200
     batch_size_proportion = 0.4

@@ -30,7 +30,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         action_dim: int,
         learning_rate: Union[float, int] = 3e-4,
         buffer_size_episodes: int = 200,
-        batch_size_proportion: Optional[int] = 0.4,
+        batch_size_proportion: float = 0.4,
         n_epochs: int = 10,
         gamma: float = 0.99,
         gae_lambda: float = 0.95,
