@@ -13,7 +13,7 @@ if __name__ == '__main__':
     height = 20
     width = 20
     ts_duration = 600
-    num_of_ts = 6 * 12
+    num_of_ts = 6
     BETA = 0.5
     vehicle_num = 2
     num_episodes = 100000
