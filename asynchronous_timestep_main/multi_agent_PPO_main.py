@@ -44,7 +44,7 @@ if __name__ == '__main__':
     action_dim = height * width
     learning_rate = 3e-4
     buffer_size_episodes = 200
-    batch_size_proportion = 0.4
+    batch_size_proportion = 0.2
     n_epochs = 10
     gamma = 1  # In OpenAI Five, when set this to 0.99, policy performs best
     gae_lambda = 0.95
