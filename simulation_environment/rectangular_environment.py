@@ -14,8 +14,8 @@ import torch
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.append(project_path)
 
-from simulation_env.network import *
-from simulation_env.Shortest_path import *
+from simulation_environment.rectangular_network import *
+from simulation_environment.Shortest_path import *
 
 
 class generate_rectangle_network_action_destination_env(generate_rectangle_network):
@@ -147,7 +147,8 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
         c = math.sqrt((point_1[0] - point_2[0]) * (point_1[0] - point_2[0]) + (point_1[1] - point_2[1]) * (
                 point_1[1] - point_2[1]))
         # A = math.degrees(math.acos((a * a - b * b - c * c)/(-2 * b * c)))
-        B = math.degrees(math.acos((b * b - a * a - c * c) / (-2 * a * c)))
+        middle_cal_result = round((b * b - a * a - c * c) / (-2 * a * c), 4)
+        B = math.degrees(math.acos(middle_cal_result))
         # C = math.degrees(math.acos((c * c - a * a - b * b)/(-2 * a * b)))
 
         return B
@@ -412,7 +413,7 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
 if __name__ == '__main__':
 
-    vehicle_num = 6
+    vehicle_num = 2
     height = 20
     width = 20
     grid_height = 2
@@ -433,14 +434,14 @@ if __name__ == '__main__':
         link_weight_distribution=link_weight_distribution,
     )
 
-    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
-        env.experienced_travel_time = pickle.load(file)
-    with open(project_path + '/experiment_results/bug_in_env_episode_duration_5h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
-            'rb') as file:
-        data = pickle.load(file)
-    # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
-    episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
-    # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
+    # with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+    #     env.experienced_travel_time = pickle.load(file)
+    # with open(project_path + '/experiment_results/bug_in_env_episode_duration_5h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
+    #         'rb') as file:
+    #     data = pickle.load(file)
+    # # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
+    # episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
+    # # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
 
     env.reset(link_weight_distribution=link_weight_distribution)
     ac_probs_dict = {}
@@ -453,7 +454,7 @@ if __name__ == '__main__':
     all_timesteps_socre = []
     for i in range(100):
         done = False
-        env.grid_weight = episodes_grid_scores_[i]
+        # env.grid_weight = episodes_grid_scores_[i]
         episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
         timesteps_socre = []
         while not done:
@@ -470,12 +471,12 @@ if __name__ == '__main__':
         episodes_total_scores.append(episode_total_score)
         episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
         env.reset(link_weight_distribution=link_weight_distribution)
-    print(np.mean(episodes_total_scores))
+    # print(np.mean(episodes_total_scores))
     et = time.time()
-    # print(et - st)
+    print(et - st)
 
     # mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
     # print(list(mean_ts_score))
 
-    with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
-        pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)
+    # with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
+    #     pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)

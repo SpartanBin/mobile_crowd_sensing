@@ -4,15 +4,9 @@ reinforcement learning simulation environment
 
 import sys
 import os
-import copy
 import math
-import random
 import time
-import pickle
-from typing import Union
 
-import numpy as np
-import pandas as pd
 import torch
 
 project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -27,8 +21,327 @@ class generate_synchronous_timestep_environment_with_directional_action():
     generate environment with synchronous timestep and directional action for multiple agents
     '''
 
-    def __init__(self):
-        pass
+    def __init__(
+            self, experienced_travel_time: np.ndarray, node_id_to_grid_id: pd.DataFrame, ac_dim: int,
+            action_interval: int, num_of_action_interval: int, num_of_cal_reward: int,
+            BETA: Union[int, float], vehicle_num: int, seed: int,
+    ):
+        '''
+
+        :param experienced_travel_time:
+        :param node_id_to_grid_id: need contain column 'grid_id', 'node_id',
+        'node_coordinate_row', 'node_coordinate_col'.
+        :param ac_dim: the dimension of action, only support 4 or 8
+        :param action_interval: seconds, every timestep's time interval
+        :param num_of_action_interval: num_of_action_interval * action_interval = interval to cal reward
+        :param num_of_cal_reward: number of timestep = num_of_cal_reward * num_of_action_interval
+        :param BETA:
+        :param vehicle_num:
+        :param seed:
+        :return:
+        '''
+
+        random.seed(seed)
+        np.random.seed(seed)
+        torch.manual_seed(seed)
+
+        assert ac_dim == 4 or ac_dim == 8, '4 and 8 are ac_dim allowed value.'
+
+        self.experienced_travel_time = experienced_travel_time
+        self.max_experienced_travel_time = self.experienced_travel_time.max()
+        self.node = node_id_to_grid_id[['node_id', 'grid_id', 'node_coordinate_row', 'node_coordinate_col']]
+        self.node.sort_values(by=['node_id'], inplace=True, ignore_index=True)
+        self.node['node_cover'] = 0
+        self.grid = pd.DataFrame({'grid_id': self.node['grid_id'].unique()})
+        self.grid.sort_values(by=['grid_id'], inplace=True, ignore_index=True)
+        self.node_id_min = self.node['node_id'].min()
+        self.node_id_max = self.node['node_id'].max()
+        self.ac_dim = ac_dim
+        self.action_interval = action_interval
+
+        self.num_of_action_interval = num_of_action_interval
+        self.interval_to_cal_reward = num_of_action_interval * self.action_interval
+        self.num_of_cal_reward = num_of_cal_reward
+        self.past_time = 0
+        self.cal_reward_time = 0
+        self.episode_duration = self.interval_to_cal_reward * self.num_of_cal_reward
+        self.BETA = BETA
+        self.vehicle_num = vehicle_num
+        self.vehicle_states = []
+        self.vehicle_action_paths = []
+        for i in range(self.vehicle_num):
+            self.vehicle_states.append([
+                -1,  # location1
+                -1,  # location2
+                0,  # remaining_time
+            ])
+            self.vehicle_action_paths.append(- 10000)
+        self.vehicle_states = np.array(self.vehicle_states)
+
+    def grid_cover_count(self):
+        grid_cover = self.node.groupby(['grid_id'], as_index=False)[['node_cover']].sum()
+        grid_cover.sort_values(by=['grid_id'], inplace=True, ignore_index=True)
+        return grid_cover
+
+    def map_grid_cover_to_node(self):
+        if 'grid_cover' in self.node.columns.values:
+            del self.node['grid_cover']
+        self.node = pd.merge(
+            self.node, self.grid[['grid_id', 'grid_cover']], on=['grid_id'])
+        self.node.sort_values(by=['node_id'], inplace=True, ignore_index=True)
+
+    def t_grid_cover_statistic(self):
+        self.grid['grid_cover{}'.format(self.cal_reward_time)] = self.grid['grid_cover'].values
+        grid_cover_or_not = copy.deepcopy(self.grid['grid_cover'].values)
+        grid_cover_or_not[np.where(grid_cover_or_not > 0)] = 1
+        if self.cal_reward_time > 0:
+            self.grid['t_grid_cover{}'.format(self.cal_reward_time)] = self.grid[
+               't_grid_cover{}'.format(
+                self.cal_reward_time - 1)].values + grid_cover_or_not
+        else:
+            self.grid['t_grid_cover{}'.format(self.cal_reward_time)] = grid_cover_or_not
+        p = self.grid['t_grid_cover{}'.format(self.cal_reward_time)].values / (self.cal_reward_time + 1)
+        p[np.where(p == 0)] = self.BETA / (self.cal_reward_time + 1)
+        self.grid['p'] = p
+        self.grid['p{}'.format(self.cal_reward_time + 1)] = p
+
+    def reset_grid_weight(self, grid_weight: Union[pd.DataFrame, None]):
+        if grid_weight is not None:
+            self.grid = grid_weight
+        else:
+            self.grid['weight'] = np.random.dirichlet(
+                np.ones(shape=len(self.grid), dtype=np.int), size=1).flatten()
+
+    def map_grid_info_to_node(self, add_col_name: list):
+        '''
+
+        :param add_col_name: items in add_col_name only support 'grid_cover', 'weight' and 'p'
+        :return:
+        '''
+        for col_name in add_col_name:
+            if col_name in self.node.columns.values:
+                del self.node[col_name]
+        self.node = pd.merge(
+            self.node, self.grid[['grid_id'] + add_col_name], on=['grid_id'])
+        self.node.sort_values(by=['node_id'], inplace=True, ignore_index=True)
+
+    def cal_reward(self, cal_reward_time):
+        weight = self.grid['weight'].values
+        grid_cover = self.grid['grid_cover{}'.format(cal_reward_time)].values
+        p = self.grid['p{}'.format(cal_reward_time)].values
+        nn0_where = np.where(grid_cover != 0)
+        n0_where = np.where(grid_cover == 0)
+        reward = np.zeros_like(grid_cover, dtype=np.float32)
+        reward[nn0_where] = - weight[nn0_where] * grid_cover[nn0_where] * np.log(
+            1 - (1 - p[nn0_where]) ** grid_cover[nn0_where])
+        reward[n0_where] = weight[n0_where] * np.log(p[n0_where])
+        return reward.sum()
+
+    def reset(self, grid_weight):
+        '''
+        reset the agents(vehicles) position and grid link_weight(rewards)
+        :return:
+        '''
+        self.past_time = 0
+        self.cal_reward_time = 0
+        loc = np.random.randint(low=self.node_id_min, high=self.node_id_max + 1, size=self.vehicle_num)
+        self.vehicle_states[:, 1] = loc  # location2
+        self.vehicle_states[:, 0] = self.vehicle_states[:, 1].copy()  # location1
+        self.vehicle_states[:, 2] = 0  # remaining_time
+        self.reset_grid_weight(
+            grid_weight=grid_weight,
+        )
+        self.node['node_cover'] = 0
+        self.grid['grid_cover'] = self.grid_cover_count()['node_cover'].values
+        self.t_grid_cover_statistic()
+        self.grid['p0'] = self.grid['p'].values
+        self.map_grid_info_to_node(add_col_name=['grid_cover', 'weight', 'p'])
+        self.vehicle_action_paths = [- 10000] * self.vehicle_num
+
+        node_weight = self.node['weight'].values
+        vehicle_states = copy.deepcopy(self.vehicle_states)
+        grid_cover = self.node['grid_cover'].values
+        p = self.node['p'].values
+
+        return vehicle_states, node_weight, grid_cover, p
+
+    def cal_angle(self, point_1: Union[tuple, list], point_2: Union[tuple, list], point_3: Union[tuple, list]):
+        """
+        calculating the Angle between the vertices at point_2
+        :param point_1:
+        :param point_2: Tuple, the coordinate of point_2
+        :param point_3:
+        :return: Float, the Angle between the vertices at point_2
+        """
+
+        a = math.sqrt((point_2[0] - point_3[0]) * (point_2[0] - point_3[0]) + (point_2[1] - point_3[1]) * (
+                point_2[1] - point_3[1]))
+        b = math.sqrt((point_1[0] - point_3[0]) * (point_1[0] - point_3[0]) + (point_1[1] - point_3[1]) * (
+                point_1[1] - point_3[1]))
+        c = math.sqrt((point_1[0] - point_2[0]) * (point_1[0] - point_2[0]) + (point_1[1] - point_2[1]) * (
+                point_1[1] - point_2[1]))
+        # A = math.degrees(math.acos((a * a - b * b - c * c)/(-2 * b * c)))
+        middle_cal_result = round((b * b - a * a - c * c) / (-2 * a * c), 4)
+        B = math.degrees(math.acos(middle_cal_result))
+        # C = math.degrees(math.acos((c * c - a * a - b * b)/(-2 * a * b)))
+
+        return B
+
+    def determine_path(self, vehicle_state: Union[tuple, list, np.ndarray], action: int) -> list:
+        '''
+        deciding the final node destination
+        :param vehicle_state: agent's state
+        :param action: East, south, west, north four directions or plus
+        northwest, northeast, southeast, southwest 8 directions totally
+        :return:
+        '''
+
+        vehicle_loc = vehicle_state[1]
+        remaining_time = vehicle_state[2]
+
+        arrive_path = []
+        start = vehicle_loc
+        start_time = self.action_interval - remaining_time
+        if start_time < 0:
+            start_time = 0
+        came_from, node_list = dijkstra_search(
+            cost=self.experienced_travel_time,
+            start=start,
+            start_time=start_time,
+            end_time=start_time + self.max_experienced_travel_time + 60,
+            node_length=self.ac_dim,
+        )
+        for node in node_list:
+            path = reconstruct_path(
+                came_from=came_from,
+                start=start,
+                goal=node,
+            )
+            arrive_path.append(path)
+
+        # calculate the Angle between the action vector and the destination vector,
+        # and choose destination with the smallest Angle as final action destination
+        vehicle_coord = self.node.loc[vehicle_loc, ['node_coordinate_row', 'node_coordinate_col']].values.astype(int)
+        if self.ac_dim == 4:
+            if action == 0:
+                action_direction = (vehicle_coord[0] - 1, vehicle_coord[1])
+            elif action == 1:
+                action_direction = (vehicle_coord[0], vehicle_coord[1] - 1)
+            elif action == 2:
+                action_direction = (vehicle_coord[0], vehicle_coord[1] + 1)
+            else:
+                action_direction = (vehicle_coord[0] + 1, vehicle_coord[1])
+        else:  # elif self.ac_dim == 8:
+            if action == 0:
+                action_direction = (vehicle_coord[0] - 1, vehicle_coord[1])
+            elif action == 1:
+                action_direction = (vehicle_coord[0] - 1, vehicle_coord[1] + 1)
+            elif action == 2:
+                action_direction = (vehicle_coord[0], vehicle_coord[1] + 1)
+            elif action == 3:
+                action_direction = (vehicle_coord[0] + 1, vehicle_coord[1] + 1)
+            elif action == 4:
+                action_direction = (vehicle_coord[0] + 1, vehicle_coord[1])
+            elif action == 5:
+                action_direction = (vehicle_coord[0] + 1, vehicle_coord[1] - 1)
+            elif action == 6:
+                action_direction = (vehicle_coord[0], vehicle_coord[1] - 1)
+            else:
+                action_direction = (vehicle_coord[0] - 1, vehicle_coord[1] - 1)
+
+        angle_list = []
+        for path in arrive_path:
+            destination_loc = path[-1]
+            destination_coord = self.node.loc[destination_loc, ['node_coordinate_row', 'node_coordinate_col']].values.astype(int)
+            angle_list.append(self.cal_angle(list(action_direction), list(vehicle_coord), list(destination_coord)))
+        index = angle_list.index(min(angle_list))
+
+        return arrive_path[index]
+
+    def execute_action(self, left_time, episode_time_cost):
+        '''
+
+        :param left_time:
+        :param episode_time_cost:
+        :return:
+        '''
+
+        done = False
+
+        action_interval = self.action_interval
+        if action_interval >= left_time:
+            action_interval = left_time
+            done = True
+
+        for i, path in enumerate(self.vehicle_action_paths):
+            path_index = 1
+            remaining_time = action_interval
+            remaining_time -= self.vehicle_states[i, 2]
+            starting_node = self.vehicle_states[i, 0]
+            ending_node = self.vehicle_states[i, 1]
+            while remaining_time > 0:
+                starting_node = ending_node
+                ending_node = int(path[path_index])
+                remaining_time -= self.experienced_travel_time[starting_node, ending_node]
+                if remaining_time >= 0:
+                    self.node.loc[ending_node, 'node_cover'] += 1
+                path_index += 1
+            self.vehicle_states[i, 2] = -remaining_time
+            self.vehicle_states[i, 1] = ending_node
+            if remaining_time == 0:
+                self.vehicle_states[i, 0] = self.vehicle_states[i, 1].copy()
+            else:
+                self.vehicle_states[i, 0] = starting_node
+
+        self.vehicle_action_paths = [- 10000] * self.vehicle_num
+
+        self.past_time += action_interval
+
+        episode_time_cost += self.action_interval
+
+        if self.past_time % self.interval_to_cal_reward == 0:
+            self.grid['grid_cover'] = self.grid_cover_count()['node_cover'].values
+            self.t_grid_cover_statistic()
+            self.map_grid_info_to_node(add_col_name=['grid_cover', 'weight', 'p'])
+            self.node['node_cover'] = 0
+            reward = self.cal_reward(cal_reward_time=self.cal_reward_time)
+            self.cal_reward_time += 1
+        else:
+            self.grid['grid_cover'] = self.grid_cover_count()['node_cover'].values
+            self.map_grid_cover_to_node()
+            reward = 0
+
+        node_weight = self.node['weight'].values
+        vehicle_states = copy.deepcopy(self.vehicle_states)
+        grid_cover = self.node['grid_cover'].values
+        p = self.node['p'].values
+
+        return vehicle_states, node_weight, grid_cover, p, reward, done, episode_time_cost
+
+    def step(self, ac_dict: dict, episode_time_cost):
+        '''
+        Env receives all agents' action and make one timestep forward
+        :param ac_dict: dict, key allowed in list(range(self.vehicle_num)), key value allowed 0, 1, 2, 3 or 0 - 7
+        :param episode_time_cost:
+        :return:
+        '''
+
+        left_time = self.episode_duration - self.past_time
+        assert left_time > 0, 'you need reset the environment first'
+
+        for i in range(self.vehicle_num):
+            path = self.determine_path(
+                vehicle_state=self.vehicle_states[i],
+                action=ac_dict[i]
+            )
+            self.vehicle_action_paths[i] = path
+
+        vehicle_states, node_weight, grid_cover, p, reward, done, episode_time_cost = self.execute_action(
+            left_time=left_time,
+            episode_time_cost=episode_time_cost,
+        )
+
+        return vehicle_states, node_weight, grid_cover, p, reward, done, episode_time_cost
 
 
 class generate_asynchronous_timestep_environment():
@@ -58,7 +371,7 @@ class generate_asynchronous_timestep_environment():
         torch.manual_seed(seed)
 
         self.experienced_travel_time = experienced_travel_time
-        self.node = node_id_to_grid_id
+        self.node = node_id_to_grid_id[['node_id', 'grid_id']]
         self.node.sort_values(by=['node_id'], inplace=True, ignore_index=True)
         self.node['node_cover'] = 0
         self.grid = pd.DataFrame({'grid_id': self.node['grid_id'].unique()})
@@ -95,6 +408,7 @@ class generate_asynchronous_timestep_environment():
 
     def grid_cover_count(self):
         grid_cover = self.node.groupby(['grid_id'], as_index=False)[['node_cover']].sum()
+        grid_cover.sort_values(by=['grid_id'], inplace=True, ignore_index=True)
         return grid_cover
 
     def map_grid_cover_to_node(self):
@@ -285,41 +599,80 @@ if __name__ == '__main__':
         seed=seed,
     )
 
-    # initial env
-    ts_duration = 600
-    num_of_ts = 2
+    # # initial asynchronous env
+    # ts_duration = 600
+    # num_of_ts = 2
+    # BETA = 0.5
+    # vehicle_num = 2
+    # env = generate_asynchronous_timestep_environment(
+    #     experienced_travel_time=experienced_travel_time,
+    #     node_id_to_grid_id=node_id_to_grid_id,
+    #     ts_duration=ts_duration,
+    #     num_of_ts=num_of_ts,
+    #     BETA=BETA,
+    #     vehicle_num=vehicle_num,
+    #     seed=seed,
+    # )
+    # # reset env
+    # grid_weight = None
+    # vehicle_states, node_weight, grid_cover, p, need_move = env.reset(grid_weight=grid_weight)
+    # # env forward
+    # ac_probs_dict = {}
+    # for vehicle_id in range(vehicle_num):
+    #     ac_probs_dict[vehicle_id] = torch.tensor([1 / (height * width)] * (height * width))
+    # st = time.time()
+    # for episode in range(100):
+    #     done = False
+    #     while not done:
+    #         ac_probs_dict_ = {}
+    #         for v_id in need_move:
+    #             ac_probs_dict_[v_id] = ac_probs_dict[v_id]
+    #         actions, vehicle_states, node_weight, grid_cover, p, need_move, reward, done, episode_time_cost = \
+    #             env.step_by_action_probs(
+    #                 ac_probs_dict=ac_probs_dict_,
+    #                 episode_time_cost=0,
+    #             )
+    #     vehicle_states, node_weight, grid_cover, p, need_move = env.reset(grid_weight=grid_weight)
+    # et = time.time()
+    # print(et - st)
+
+    # initial synchronous env
+    ac_dim = 8
+    action_interval = 180
+    num_of_action_interval = 4
+    num_of_cal_reward = 5
     BETA = 0.5
     vehicle_num = 2
-    env = generate_asynchronous_timestep_environment(
+    env = generate_synchronous_timestep_environment_with_directional_action(
         experienced_travel_time=experienced_travel_time,
         node_id_to_grid_id=node_id_to_grid_id,
-        ts_duration=ts_duration,
-        num_of_ts=num_of_ts,
+        ac_dim=ac_dim,
+        action_interval=action_interval,
+        num_of_action_interval=num_of_action_interval,
+        num_of_cal_reward=num_of_cal_reward,
         BETA=BETA,
         vehicle_num=vehicle_num,
         seed=seed,
     )
-
     # reset env
     grid_weight = None
-    vehicle_states, node_weight, grid_cover, p, need_move = env.reset(grid_weight=grid_weight)
-
+    vehicle_states, node_weight, grid_cover, p = env.reset(grid_weight=grid_weight)
     # env forward
     ac_probs_dict = {}
     for vehicle_id in range(vehicle_num):
-        ac_probs_dict[vehicle_id] = torch.tensor([1 / (height * width)] * (height * width))
+        ac_probs_dict[vehicle_id] = torch.tensor([1 / 8] * 8)
     st = time.time()
     for episode in range(100):
         done = False
         while not done:
-            ac_probs_dict_ = {}
-            for v_id in need_move:
-                ac_probs_dict_[v_id] = ac_probs_dict[v_id]
-            actions, vehicle_states, node_weight, grid_cover, p, need_move, reward, done, episode_time_cost = \
-                env.step_by_action_probs(
-                    ac_probs_dict=ac_probs_dict_,
+            ac_dict = {}
+            for v_id in range(vehicle_num):
+                ac_dict[v_id] = torch.multinomial(ac_probs_dict[v_id], num_samples=1).item()
+            vehicle_states, node_weight, grid_cover, p, reward, done, episode_time_cost = env.step(
+                    ac_dict=ac_dict,
                     episode_time_cost=0,
                 )
-        vehicle_states, node_weight, grid_cover, p, need_move = env.reset(grid_weight=grid_weight)
+            # print(reward)
+        vehicle_states, node_weight, grid_cover, p = env.reset(grid_weight=grid_weight)
     et = time.time()
     print(et - st)

@@ -84,7 +84,12 @@ def generate_rectangle_network(
 
     # generate grid
     grid = np.ones((int(height / per_grid_height + 0.999999999999), int(width / per_grid_width + 0.999999999999)))
-    node_id_to_grid_id = pd.DataFrame({'node_id': list(range(height * width)), 'grid_id': [-1] * (height * width)})
+    node_id_to_grid_id = pd.DataFrame({
+        'node_id': list(range(height * width)),
+        'grid_id': [-1] * (height * width),
+        'node_coordinate_row': [-1] * (height * width),
+        'node_coordinate_col': [-1] * (height * width),
+    })
     for row in range(height):
         for col in range(width):
             node_id = int(row * width + col)
@@ -92,6 +97,8 @@ def generate_rectangle_network(
             grid_col = int(col / per_grid_width)
             grid_id = int(grid_row * grid.shape[1] + grid_col)
             node_id_to_grid_id.loc[node_id, 'grid_id'] = grid_id
+            node_id_to_grid_id.loc[node_id, 'node_coordinate_row'] = row
+            node_id_to_grid_id.loc[node_id, 'node_coordinate_col'] = col
 
     return experienced_travel_time, node_id_to_grid_id
 
