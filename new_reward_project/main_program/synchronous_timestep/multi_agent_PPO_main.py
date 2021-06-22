@@ -1,39 +1,58 @@
 import sys
 import os
 
-project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 sys.path.append(project_path)
 
-from simulation_env.environment import *
-from multi_agent_dispatching.PPO.multi_agent_PPO_algorithm import *
+from new_reward_project.simulation_environment.environment import *
+from new_reward_project.multi_agent_dispatching.synchronous_timestep.PPO.multi_agent_PPO_algorithm import *
 
 
 if __name__ == '__main__':
 
+    # generate network
     height = 20
     width = 20
     low_second = 30
     high_second = 300
-    grid_height = 2
-    grid_width = 2
+    per_grid_height = 2
+    per_grid_width = 2
+    seed = 4000
+    experienced_travel_time, node_id_to_grid_id = generate_rectangle_network(
+        height=height,
+        width=width,
+        low_second=low_second,
+        high_second=high_second,
+        per_grid_height=per_grid_height,
+        per_grid_width=per_grid_width,
+        seed=seed,
+    )
+
+    # initial synchronous env
+    ac_dim = 8
     action_interval = 180
-    left_reward_to_stop = 0.01
-    episode_duration = int(3600 * 2)
-    vehicle_num = 4
+    num_of_action_interval = 4
+    num_of_cal_reward = 5
+    BETA = 0.5
+    vehicle_num = 2
+    env = generate_synchronous_timestep_environment_with_directional_action(
+        experienced_travel_time=experienced_travel_time,
+        node_id_to_grid_id=node_id_to_grid_id,
+        ac_dim=ac_dim,
+        action_interval=action_interval,
+        num_of_action_interval=num_of_action_interval,
+        num_of_cal_reward=num_of_cal_reward,
+        BETA=BETA,
+        vehicle_num=vehicle_num,
+        seed=seed,
+    )
 
-    train_link_weight_distribution = 'GD'
-    test_link_weight_distribution = 'GD'
-
-    # allowed reward_type values are 'greedy', 'sum', 'greedy_mean', 'team_spirit', 'distance'
-    reward_type = 'greedy'
-    cooperative_weight = 1 / (vehicle_num * 1.5)
-    negative_constant_reward = 0
     weight_shape = height * width
     share_policy = True
     ortho_init = True
     conv_params = [
         {
-            'in_channels': 3,
+            'in_channels': vehicle_num * 3 + 3,
             'out_channels': 64,
             'kernel_size': 5,
             'stride': 2,
@@ -52,7 +71,6 @@ if __name__ == '__main__':
     add_BN = True
     output_dim = [64, 32]
     share_params = False
-    action_dim = 4
     learning_rate = 3e-4
     n_steps = 2048
     batch_size = n_steps
@@ -66,30 +84,9 @@ if __name__ == '__main__':
     max_grad_norm = 0.5
     target_kl = None
     device = 'cuda'
-    seed = 4000
-
-    env = generate_rectangle_network_action_destination_env(
-        height=height,
-        width=width,
-        low_second=low_second,
-        high_second=high_second,
-        grid_height=grid_height,
-        grid_width=grid_width,
-        action_interval=action_interval,
-        left_reward_to_stop=left_reward_to_stop,
-        episode_duration=episode_duration,
-        link_weight_distribution=train_link_weight_distribution,
-        vehicle_num=vehicle_num,
-        seed=seed,
-    )
-    with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
-        env.experienced_travel_time = pickle.load(file)
 
     model = multi_agent_PPO(
         env=env,
-        reward_type=reward_type,
-        cooperative_weight=cooperative_weight,
-        negative_constant_reward=negative_constant_reward,
         vehicle_num=vehicle_num,
         weight_shape=weight_shape,
         share_policy=share_policy,
@@ -98,7 +95,7 @@ if __name__ == '__main__':
         add_BN=add_BN,
         output_dim=output_dim,
         share_params=share_params,
-        action_dim=action_dim,
+        action_dim=ac_dim,
         learning_rate=learning_rate,
         n_steps=n_steps,
         batch_size=batch_size,
@@ -117,6 +114,5 @@ if __name__ == '__main__':
     model.learn(
         total_timesteps=1000000,
         test_episode_times=100,
-        train_link_weight_distribution=train_link_weight_distribution,
-        test_link_weight_distribution=test_link_weight_distribution,
+        grid_weight=None,
     )

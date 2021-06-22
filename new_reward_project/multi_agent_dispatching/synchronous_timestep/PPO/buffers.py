@@ -8,7 +8,6 @@ class RolloutBufferSamples(NamedTuple):
     node_weight: np.ndarray
     grid_cover: np.ndarray
     p: np.ndarray
-    number_of_seconds: np.ndarray
     actions: np.ndarray
     old_values: np.ndarray
     old_log_prob: np.ndarray
@@ -54,7 +53,6 @@ class RolloutBuffer():
         self.full = False
         self.gae_lambda = gae_lambda
         self.gamma = gamma
-        self.number_of_seconds = None
         self.generator_ready = False
         self.reset()
 
@@ -63,7 +61,6 @@ class RolloutBuffer():
         self.node_weight = np.zeros((self.buffer_size, self.weight_shape), dtype=np.float32)
         self.grid_cover = np.zeros((self.buffer_size, self.weight_shape), dtype=np.float32)
         self.p = np.zeros((self.buffer_size, self.weight_shape), dtype=np.float32)
-        self.number_of_seconds = np.zeros(self.buffer_size, dtype=np.float32)
         self.actions = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.rewards = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
         self.returns = np.zeros((self.buffer_size, self.vehicle_num), dtype=np.float32)
@@ -76,7 +73,7 @@ class RolloutBuffer():
         self.full = False
 
     def add(
-        self, obs: list, number_of_seconds: float, actions: np.ndarray, reward: np.ndarray,
+        self, obs: list, actions: np.ndarray, reward: np.ndarray,
             done: bool, value: np.ndarray, log_prob: np.ndarray,
     ) -> None:
         """
@@ -95,9 +92,8 @@ class RolloutBuffer():
         self.node_weight[self.pos] = node_weight.copy()
         self.grid_cover[self.pos] = grid_cover.copy()
         self.p[self.pos] = p.copy()
-        self.number_of_seconds[self.pos] = number_of_seconds
         self.actions[self.pos] = actions.copy()
-        self.rewards[self.pos] = reward.copy()
+        self.rewards[self.pos] = reward
         self.dones[self.pos] = np.array(done).copy()
         self.values[self.pos] = value.copy()
         self.log_probs[self.pos] = log_prob.copy()
@@ -157,7 +153,6 @@ class RolloutBuffer():
             self.node_weight[batch_inds],
             self.grid_cover[batch_inds],
             self.p[batch_inds],
-            self.number_of_seconds[batch_inds],
             self.actions[batch_inds],
             self.values[batch_inds],
             self.log_probs[batch_inds],

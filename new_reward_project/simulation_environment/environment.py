@@ -9,11 +9,11 @@ import time
 
 import torch
 
-project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(project_path)
 
-from simulation_environment.Shortest_path import *
-from simulation_environment.network import *
+from new_reward_project.simulation_environment.Shortest_path import *
+from new_reward_project.simulation_environment.network import *
 
 
 class generate_synchronous_timestep_environment_with_directional_action():
@@ -77,6 +77,7 @@ class generate_synchronous_timestep_environment_with_directional_action():
             ])
             self.vehicle_action_paths.append(- 10000)
         self.vehicle_states = np.array(self.vehicle_states)
+        self.got_reward = 0
 
     def grid_cover_count(self):
         grid_cover = self.node.groupby(['grid_id'], as_index=False)[['node_cover']].sum()
@@ -135,7 +136,9 @@ class generate_synchronous_timestep_environment_with_directional_action():
         reward[nn0_where] = - weight[nn0_where] * grid_cover[nn0_where] * np.log(
             1 - (1 - p[nn0_where]) ** grid_cover[nn0_where])
         reward[n0_where] = weight[n0_where] * np.log(p[n0_where])
-        return reward.sum()
+        reward = reward.sum()
+        self.got_reward += reward
+        return reward
 
     def reset(self, grid_weight):
         '''
@@ -151,6 +154,7 @@ class generate_synchronous_timestep_environment_with_directional_action():
         self.reset_grid_weight(
             grid_weight=grid_weight,
         )
+        self.got_reward = 0
         self.node['node_cover'] = 0
         self.grid['grid_cover'] = self.grid_cover_count()['node_cover'].values
         self.t_grid_cover_statistic()

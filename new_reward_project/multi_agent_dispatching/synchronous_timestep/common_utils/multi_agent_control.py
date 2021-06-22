@@ -10,9 +10,6 @@ class multi_agent():
     def __init__(
         self,
         env,
-        reward_type,
-        cooperative_weight,
-        negative_constant_reward,
         vehicle_num: int,
         seed: Optional[int] = None,
         device: Union[torch.device, str] = "cpu",
@@ -30,10 +27,6 @@ class multi_agent():
         self.num_timesteps = 0
 
         self.env = env
-        self.reward_type = reward_type
-        self.cooperative_weight = cooperative_weight
-        self.negative_constant_reward = negative_constant_reward
-
 
         self.vehicle_num = vehicle_num
         self.device = torch.device(device)
@@ -48,19 +41,11 @@ class multi_agent():
         for i in reselect_agent:
             self.select_action_time += 1
             distribution = distributions[i]
-            action = distribution.get_actions()
+            action = distribution.get_actions().item()
             ac_dict[i] = action
             actions.append(action)
             ac_probs_dict[i] = distribution.all_probs()[0]
         actions = np.array(actions)
-
-        # actions, new_obs, rewards, done, episode_time_cost = env.step_by_action_probs(
-        #     ac_probs_dict=ac_probs_dict,
-        #     reward_type=self.reward_type,
-        #     cooperative_weight=self.cooperative_weight,
-        #     negative_constant_reward=self.negative_constant_reward,
-        #     episode_time_cost=episode_time_cost,
-        # )
 
         vehicle_states, node_weight, grid_cover, p, reward, done, episode_time_cost = env.step(
             ac_dict=ac_dict,
@@ -80,16 +65,16 @@ class multi_agent():
         self.num_timesteps = 0
         self.episode_time_cost = 0
         self.episode = 0
-        self.the_last_100_episodes_total_scores = []
-        self.last_100_episodes_mean_total_score = 0
-        self.the_best_last_100_episodes_mean_total_score = 0
-        self.the_best_100_episodes_total_scores = []
-        self.random_policy_100_episodes_mean_total_score = None
+        self.the_last_100_episodes_got_rewards = []
+        self.last_100_episodes_mean_got_reward = - 100000000000000000000
+        self.the_best_last_100_episodes_mean_got_reward = - 100000000000000000000
+        self.the_best_100_episodes_got_rewards = []
+        self.random_policy_100_episodes_mean_got_reward = None
         vehicle_states, node_weight, grid_cover, p = self.env.reset(grid_weight=grid_weight)
-        vehicle_states = vehicle_states.astype(np.float32)
-        node_weight = node_weight.astype(np.float32)
-        grid_cover = grid_cover.astype(np.float32)
-        p = p.astype(np.float32)
+        vehicle_states = vehicle_states.astype(np.float32).reshape((1,) + vehicle_states.shape)
+        node_weight = node_weight.astype(np.float32).reshape((1,) + node_weight.shape)
+        grid_cover = grid_cover.astype(np.float32).reshape((1,) + grid_cover.shape)
+        p = p.astype(np.float32).reshape((1,) + p.shape)
         self._last_obs = [vehicle_states, node_weight, grid_cover, p]
         self._last_done = False
         self.select_action_time = 0

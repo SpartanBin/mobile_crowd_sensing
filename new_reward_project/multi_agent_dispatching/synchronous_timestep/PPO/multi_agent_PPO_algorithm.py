@@ -11,8 +11,8 @@ from torch.nn import functional as F
 project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(project_path)
 
-from multi_agent_dispatching.synchronous_timestep.common_utils import policies, multi_agent_control
-from multi_agent_dispatching.synchronous_timestep.PPO import buffers
+from new_reward_project.multi_agent_dispatching.synchronous_timestep.common_utils import policies, multi_agent_control
+from new_reward_project.multi_agent_dispatching.synchronous_timestep.PPO import buffers
 
 
 class multi_agent_PPO(multi_agent_control.multi_agent):
@@ -20,9 +20,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
     def __init__(
         self,
         env,
-        reward_type,
-        cooperative_weight,
-        negative_constant_reward,
         vehicle_num: int,
         weight_shape: int,
         share_policy: bool,
@@ -50,9 +47,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
         super(multi_agent_PPO, self).__init__(
             env=env,
-            reward_type=reward_type,
-            cooperative_weight=cooperative_weight,
-            negative_constant_reward=negative_constant_reward,
             vehicle_num=vehicle_num,
             seed=seed,
             device=device,
@@ -100,17 +94,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             action_dim=self.action_dim,
             learning_rate=self.learning_rate,
         ).to(self.device).eval()
-        # self.policy = policies.multi_agent_ACP_with_timer(
-        #     vehicle_num=self.vehicle_num,
-        #     weight_shape=self.weight_shape,
-        #     share_policy=self.share_policy,
-        #     ortho_init=self.ortho_init,
-        #     conv_params=self.conv_params,
-        #     add_BN=self.add_BN,
-        #     output_dim=self.output_dim,
-        #     action_dim=self.action_dim,
-        #     learning_rate=self.learning_rate,
-        # ).to(self.device).eval()
 
     def collect_rollouts(self, grid_weight):
         """
@@ -121,15 +104,11 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         assert self._last_obs is not None, "No previous observation was provided"
         need_test = False
         timestep = 0
-        number_of_episode_timestep = 0
         done = False
         self.rollout_buffer.reset()
         self.policy.eval()
 
         while timestep < self.n_steps:
-
-            number_of_seconds = (self.env.episode_duration - number_of_episode_timestep * self.env.action_interval) \
-                                / self.env.episode_duration
 
             with torch.no_grad():
                 # Convert to pytorch tensor
@@ -152,67 +131,61 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
             if done:
                 self.episode += 1
-                episode_total_score = 1 - self.env.left_reward
-                self.the_last_100_episodes_total_scores.append(episode_total_score)
-                self.the_best_100_episodes_total_scores.append(episode_total_score)
-                self.last_100_episodes_mean_total_score = np.mean(self.the_last_100_episodes_total_scores)
-                if len(self.the_last_100_episodes_total_scores) > 100:
-                    if self.last_100_episodes_mean_total_score > self.the_best_last_100_episodes_mean_total_score:
-                        self.the_best_last_100_episodes_mean_total_score = self.last_100_episodes_mean_total_score
+                got_reward = self.env.got_reward
+                self.the_last_100_episodes_got_rewards.append(got_reward)
+                self.the_best_100_episodes_got_rewards.append(got_reward)
+                self.last_100_episodes_mean_got_reward = np.mean(self.the_last_100_episodes_got_rewards)
+                if len(self.the_last_100_episodes_got_rewards) > 100:
+                    if self.last_100_episodes_mean_got_reward > self.the_best_last_100_episodes_mean_got_reward:
+                        self.the_best_last_100_episodes_mean_got_reward = self.last_100_episodes_mean_got_reward
                         need_test = True
-                    self.the_last_100_episodes_total_scores.pop(0)
-                    self.the_best_100_episodes_total_scores.sort()
-                    self.the_best_100_episodes_total_scores.pop(0)
+                    self.the_last_100_episodes_got_rewards.pop(0)
+                    self.the_best_100_episodes_got_rewards.sort()
+                    self.the_best_100_episodes_got_rewards.pop(0)
                 if self.episode % 100 == 0:
                     print('''
                     ******************************************************************************************************
-                    in {}th episode, the number of vehicle is {}, reward_type is '{}', 
-                    cooperative_weight is {}, negative_constant_reward is {}, 
+                    in {}th episode, the number of vehicle is {} 
                     ------------------------------------------------------------------------------------------------------
-                    episode_time_cost = {}, episode_total_score = {}, select_action_times = {}, 
-                    random_policy_100_episodes_mean_total_score = {}, 
-                    the_best_100_episodes_mean_total_score = {}, 
-                    last_100_episodes_mean_total_score = {}, 
-                    the_best_last_100_episodes_mean_total_score = {}
+                    episode_time_cost = {}, got_reward = {}, select_action_times = {}, 
+                    random_policy_100_episodes_mean_got_reward = {}, 
+                    the_best_100_episodes_mean_got_reward = {}, 
+                    last_100_episodes_mean_got_reward = {}, 
+                    the_best_last_100_episodes_mean_got_reward = {}
                     ******************************************************************************************************
                     '''.format(
-                        self.episode, self.vehicle_num, self.reward_type, self.cooperative_weight,
-                        self.negative_constant_reward, self.episode_time_cost, episode_total_score,
-                        self.select_action_time, self.random_policy_100_episodes_mean_total_score,
-                        np.mean(self.the_best_100_episodes_total_scores),
-                        self.last_100_episodes_mean_total_score,
-                        self.the_best_last_100_episodes_mean_total_score,
+                        self.episode, self.vehicle_num, self.episode_time_cost, got_reward,
+                        self.select_action_time, self.random_policy_100_episodes_mean_got_reward,
+                        np.mean(self.the_best_100_episodes_got_rewards),
+                        self.last_100_episodes_mean_got_reward,
+                        self.the_best_last_100_episodes_mean_got_reward,
                     ))
                 self.episode_time_cost = 0
                 self.select_action_time = 0
                 vehicle_states, node_weight, grid_cover, p = self.env.reset(
                     grid_weight=grid_weight)
-                number_of_episode_timestep = 0
-            vehicle_states = vehicle_states.astype(np.float32)
-            node_weight = node_weight.astype(np.float32)
-            grid_cover = grid_cover.astype(np.float32)
-            p = p.astype(np.float32)
+            vehicle_states = vehicle_states.astype(np.float32).reshape((1,) + vehicle_states.shape)
+            node_weight = node_weight.astype(np.float32).reshape((1,) + node_weight.shape)
+            grid_cover = grid_cover.astype(np.float32).reshape((1,) + grid_cover.shape)
+            p = p.astype(np.float32).reshape((1,) + p.shape)
             new_obs = [vehicle_states, node_weight, grid_cover, p]
 
             self.num_timesteps += 1
             timestep += 1
-
-            self.rollout_buffer.add(self._last_obs, number_of_seconds, actions, reward,
+            self.rollout_buffer.add(self._last_obs, actions, reward,
                                     self._last_done, values, log_probs)
             self._last_obs = new_obs
             self._last_done = done
-            number_of_episode_timestep += 1
-
-        number_of_seconds = (self.env.episode_duration - number_of_episode_timestep * self.env.action_interval) \
-                            / self.env.episode_duration
 
         with torch.no_grad():
             # Compute value for the last timestep
-            loc_features = self._last_obs[0]
-            weight_features = self._last_obs[1]
+            vehicle_states, node_weight, grid_cover, p = self._last_obs
             _, values, _ = self.policy.forward(
-                loc_features=loc_features,
-                weight_features=weight_features,
+                vehicle_states=vehicle_states,
+                node_weight=node_weight,
+                grid_cover=grid_cover,
+                p=p,
+                actions=None,
             )
         values = values.cpu().numpy()
 
@@ -240,16 +213,12 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 # if that line is commented (as in SAC)
 
                 values, log_prob, entropy = self.policy.forward(
-                    loc_features=rollout_data.loc,
-                    weight_features=rollout_data.weight[:, np.newaxis],
+                    vehicle_states=rollout_data.vehicle_states,
+                    node_weight=rollout_data.node_weight,
+                    grid_cover=rollout_data.grid_cover,
+                    p=rollout_data.p,
                     actions=rollout_data.actions,
                 )
-                # values, log_prob, entropy = self.policy.forward(
-                #     loc_features=rollout_data.loc,
-                #     weight_features=rollout_data.weight[:, np.newaxis],
-                #     number_of_seconds=rollout_data.number_of_seconds,
-                #     actions=rollout_data.actions,
-                # )
 
                 # Normalize advantage
                 advantages = rollout_data.advantages
@@ -308,68 +277,57 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 print(f"Early stopping at step {epoch} due to reaching max kl: {np.mean(approx_kl_divs):.2f}")
                 break
 
-    def test(self, test_episode_times: int, link_weight_distribution: str):
+    def test(self, test_episode_times: int, grid_weight):
         self.policy.eval()
         env = copy.deepcopy(self.env)
-        new_obs = env.reset(link_weight_distribution=link_weight_distribution)
-        episodes_total_scores = []
-        episodes_grid_scores = []
-        episodes_got_scores = []
-        all_timesteps_socre = []
-        for _ in range(test_episode_times):
+        new_obs = env.reset(grid_weight=grid_weight)
+        got_rewards = np.zeros(test_episode_times, dtype=np.float32)
+        for episode in range(test_episode_times):
             done = False
             episode_time_cost = 0
-            episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
-            timesteps_socre = []
             while not done:
-                new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
-                new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
+                vehicle_states, node_weight, grid_cover, p = new_obs
+                vehicle_states = vehicle_states.astype(np.float32).reshape((1,) + vehicle_states.shape)
+                node_weight = node_weight.astype(np.float32).reshape((1,) + node_weight.shape)
+                grid_cover = grid_cover.astype(np.float32).reshape((1,) + grid_cover.shape)
+                p = p.astype(np.float32).reshape((1,) + p.shape)
                 with torch.no_grad():
-                    loc_features = new_obs[0]
-                    weight_features = new_obs[1]
                     distributions, _, _ = self.policy.forward(
-                        loc_features=loc_features,
-                        weight_features=weight_features,
+                        vehicle_states=vehicle_states,
+                        node_weight=node_weight,
+                        grid_cover=grid_cover,
+                        p=p,
+                        actions=None,
                     )
-                    # distributions, _, _ = self.policy.forward(
-                    #     loc_features=loc_features,
-                    #     weight_features=weight_features,
-                    #     number_of_seconds=None,
-                    # )
-                _, _, new_obs, _, done, episode_time_cost = self.make_one_step_forward_for_env(
-                    env=env,
-                    distributions=distributions,
-                    episode_time_cost=episode_time_cost,
-                )
-                timesteps_socre.append(1 - env.left_reward)
-            episode_total_score = 1 - env.left_reward
-            episodes_total_scores.append(episode_total_score)
-            all_timesteps_socre.append(timesteps_socre)
-            episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
-            new_obs = env.reset(link_weight_distribution=link_weight_distribution)
-        return np.mean(episodes_total_scores), episodes_grid_scores, episodes_got_scores, all_timesteps_socre
+                _, _, vehicle_states, node_weight, grid_cover, p, _, done, episode_time_cost = \
+                    self.make_one_step_forward_for_env(
+                        env=env,
+                        distributions=distributions,
+                        episode_time_cost=episode_time_cost,
+                    )
+                new_obs = [vehicle_states, node_weight, grid_cover, p]
+            got_rewards[episode] = env.got_reward
+            new_obs = env.reset(grid_weight=grid_weight)
+        return got_rewards.mean()
 
-    def save(self, train_link_weight_distribution, test_link_weight_distribution):
+    def save(self):
         self.best_state['best_episode'] = self.best_episode
         self.best_state['best_train_session'] = self.best_train_session
-        self.best_state['random_policy_100_episodes_mean_total_score'] = \
-            self.random_policy_100_episodes_mean_total_score
-        self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
+        self.best_state['random_policy_100_episodes_mean_got_reward'] = \
+            self.random_policy_100_episodes_mean_got_reward
+        self.best_state['the_best_100_episodes_mean_got_reward'] = np.mean(self.the_best_100_episodes_got_rewards)
         self.test_state['best_state'] = self.best_state
-        with open('PPO_state_vehicle{}_env_{}_{}_ed_{}_trainD_{}_testD_{}.pickle'.format(
-                self.vehicle_num, self.env.height, self.env.width, self.env.episode_duration,
-                train_link_weight_distribution, test_link_weight_distribution
+        with open('PPO_state_vehicle{}_ed_{}.pickle'.format(
+                self.vehicle_num, self.env.episode_duration,
         ), 'wb') as file:
             pickle.dump(self.test_state, file)
 
-    def learn(self, total_timesteps: int, test_episode_times: int,
-              train_link_weight_distribution: str,
-              test_link_weight_distribution: str):
+    def learn(self, total_timesteps: int, test_episode_times: int, grid_weight):
 
-        self.init_learn(train_link_weight_distribution=train_link_weight_distribution)
-        self.random_policy_100_episodes_mean_total_score = 0
-        self.cur_state = self.random_policy_100_episodes_mean_total_score
-        self.best_state = {'test_100_episodes_mean_total_score': self.random_policy_100_episodes_mean_total_score,
+        self.init_learn(grid_weight=grid_weight)
+        self.random_policy_100_episodes_mean_got_reward = - 100000000000000000000000000000
+        self.cur_state = self.random_policy_100_episodes_mean_got_reward
+        self.best_state = {'test_100_episodes_mean_got_reward': self.random_policy_100_episodes_mean_got_reward,
                            'policy_params': self.policy.state_dict()}
         self.test_state = {}
         self.best_episode = 0
@@ -378,26 +336,23 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         test_session = 0
         self.best_train_session = train_session
         while self.num_timesteps < total_timesteps:
-            need_test = self.collect_rollouts(link_weight_distribution=train_link_weight_distribution)
+            need_test = self.collect_rollouts(grid_weight=grid_weight)
             self.train()
             train_session += 1
             print('training successful in {}th training session'.format(train_session))
 
             #------------------------------------------test--------------------------------------------------
             test_session += 1
-            self.cur_state, episodes_grid_scores, episodes_got_scores, all_timesteps_socre = self.test(
+            self.cur_state = self.test(
                 test_episode_times=test_episode_times,
-                link_weight_distribution=test_link_weight_distribution,
+                grid_weight=grid_weight,
             )
 
             self.test_state[test_session] = {}
-            self.test_state[test_session]['test_100_episodes_mean_total_score'] = self.cur_state
-            self.test_state[test_session]['episodes_grid_scores'] = episodes_grid_scores
-            self.test_state[test_session]['episodes_got_scores'] = episodes_got_scores
-            self.test_state[test_session]['all_timesteps_socre'] = all_timesteps_socre
+            self.test_state[test_session]['test_100_episodes_mean_got_reward'] = self.cur_state
 
-            if self.cur_state > self.best_state['test_100_episodes_mean_total_score']:
-                self.best_state['test_100_episodes_mean_total_score'] = self.cur_state
+            if self.cur_state > self.best_state['test_100_episodes_mean_got_reward']:
+                self.best_state['test_100_episodes_mean_got_reward'] = self.cur_state
                 self.best_state['policy_params'] = self.policy.state_dict()
                 self.best_state['test_session'] = test_session
                 self.best_episode = self.episode
@@ -412,20 +367,14 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
             **------------------------------------------------------------------------------------------**
             '''.format(
                 test_session, self.episode, train_session, self.cur_state,
-                self.best_state['test_100_episodes_mean_total_score'], self.best_episode, self.best_train_session))
-            self.save(
-                train_link_weight_distribution=train_link_weight_distribution,
-                test_link_weight_distribution=test_link_weight_distribution,
-            )
+                self.best_state['test_100_episodes_mean_got_reward'], self.best_episode, self.best_train_session))
+            # self.save()
             # ------------------------------------------------------------------------------------------------
 
-            if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 2:
-                break
+            # if self.last_100_episodes_mean_got_reward <= self.the_best_last_100_episodes_mean_got_reward / 2:
+            #     break
 
-        self.save(
-            train_link_weight_distribution=train_link_weight_distribution,
-            test_link_weight_distribution=test_link_weight_distribution,
-        )
+        # self.save()
 
     def load_params(self, file_path):
         with open(file_path, 'rb') as file:
