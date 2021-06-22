@@ -112,7 +112,7 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
         #     learning_rate=self.learning_rate,
         # ).to(self.device).eval()
 
-    def collect_rollouts(self, link_weight_distribution):
+    def collect_rollouts(self, grid_weight):
         """
         Collect experiences using the current policy and fill a ``RolloutBuffer``.
         The term rollout here refers to the model-free notion and should not
@@ -133,24 +133,22 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
 
             with torch.no_grad():
                 # Convert to pytorch tensor
-                loc_features = self._last_obs[0]
-                weight_features = self._last_obs[1]
+                vehicle_states, node_weight, grid_cover, p = self._last_obs
                 distributions, values, _ = self.policy.forward(
-                    loc_features=loc_features,
-                    weight_features=weight_features,
+                    vehicle_states=vehicle_states,
+                    node_weight=node_weight,
+                    grid_cover=grid_cover,
+                    p=p,
+                    actions=None,
                 )
-                # distributions, values, _ = self.policy.forward(
-                #     loc_features=loc_features,
-                #     weight_features=weight_features,
-                #     number_of_seconds=np.array([number_of_seconds]),
-                # )
             values = values.cpu().numpy()
 
-            actions, log_probs, new_obs, reward, done, self.episode_time_cost = self.make_one_step_forward_for_env(
-                env=self.env,
-                distributions=distributions,
-                episode_time_cost=self.episode_time_cost,
-            )
+            actions, log_probs, vehicle_states, node_weight, grid_cover, p, reward, done, self.episode_time_cost = \
+                self.make_one_step_forward_for_env(
+                    env=self.env,
+                    distributions=distributions,
+                    episode_time_cost=self.episode_time_cost,
+                )
 
             if done:
                 self.episode += 1
@@ -187,10 +185,14 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                     ))
                 self.episode_time_cost = 0
                 self.select_action_time = 0
-                new_obs = self.env.reset(link_weight_distribution=link_weight_distribution)
+                vehicle_states, node_weight, grid_cover, p = self.env.reset(
+                    grid_weight=grid_weight)
                 number_of_episode_timestep = 0
-            new_obs[0] = new_obs[0].astype(np.float32).reshape((1, -1))
-            new_obs[1] = new_obs[1].astype(np.float32).reshape((1, 1,) + new_obs[1].shape)
+            vehicle_states = vehicle_states.astype(np.float32)
+            node_weight = node_weight.astype(np.float32)
+            grid_cover = grid_cover.astype(np.float32)
+            p = p.astype(np.float32)
+            new_obs = [vehicle_states, node_weight, grid_cover, p]
 
             self.num_timesteps += 1
             timestep += 1
@@ -212,11 +214,6 @@ class multi_agent_PPO(multi_agent_control.multi_agent):
                 loc_features=loc_features,
                 weight_features=weight_features,
             )
-            # _, values, _ = self.policy.forward(
-            #     loc_features=loc_features,
-            #     weight_features=weight_features,
-            #     number_of_seconds=np.array([number_of_seconds]),
-            # )
         values = values.cpu().numpy()
 
         self.rollout_buffer.compute_returns_and_advantage(last_values=values, done=done)

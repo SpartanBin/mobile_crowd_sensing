@@ -11,11 +11,11 @@ import pickle
 
 import torch
 
-project_path = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+project_path = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 sys.path.append(project_path)
 
-from simulation_environment.rectangular_network import *
-from simulation_environment.Shortest_path import *
+from ITSC_project.simulation_environment.rectangular_network import *
+from ITSC_project.simulation_environment.Shortest_path import *
 
 
 class generate_rectangle_network_action_destination_env(generate_rectangle_network):
