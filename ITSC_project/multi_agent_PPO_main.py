@@ -20,8 +20,8 @@ if __name__ == '__main__':
         grid_width = 2
         action_interval = 180
         left_reward_to_stop = 0.01
-        episode_duration = int(3600 * 2)
-        vehicle_num = 4
+        episode_duration = int(3600)
+        vehicle_num = 2
 
         train_link_weight_distribution = 'UD'
         test_link_weight_distribution = 'UD'
