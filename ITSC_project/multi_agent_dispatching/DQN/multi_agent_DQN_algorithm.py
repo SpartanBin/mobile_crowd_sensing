@@ -211,6 +211,7 @@ class multi_agent_DQN(multi_agent_control.multi_agent):
             ******************************************************************************************************
             in {}th episode, the number of vehicle is {}, reward_type is '{}', 
             cooperative_weight is {}, negative_constant_reward is {}, 
+            seed is {}, 
             ------------------------------------------------------------------------------------------------------
             episode_time_cost = {}, episode_total_score = {}, select_action_times = {}, 
             random_policy_100_episodes_mean_total_score = {}, 
@@ -220,7 +221,7 @@ class multi_agent_DQN(multi_agent_control.multi_agent):
             ******************************************************************************************************
             '''.format(
                 self.episode, self.vehicle_num, self.reward_type, self.cooperative_weight,
-                self.negative_constant_reward, self.episode_time_cost, episode_total_score,
+                self.negative_constant_reward, self.seed, self.episode_time_cost, episode_total_score,
                 self.select_action_time, self.random_policy_100_episodes_mean_total_score,
                 np.mean(self.the_best_100_episodes_total_scores),
                 self.last_100_episodes_mean_total_score,
@@ -320,8 +321,8 @@ class multi_agent_DQN(multi_agent_control.multi_agent):
             self.random_policy_100_episodes_mean_total_score
         self.best_state['the_best_100_episodes_mean_total_score'] = np.mean(self.the_best_100_episodes_total_scores)
         self.test_state['best_state'] = self.best_state
-        with open('DQN_state_vehicle{}_env_{}_{}.pickle'.format(
-                self.vehicle_num, self.env.height, self.env.width), 'wb') as file:
+        with open('DQN_state_vehicle{}_env_{}_{}_seed{}.pickle'.format(
+                self.vehicle_num, self.env.height, self.env.width, self.seed), 'wb') as file:
             pickle.dump(self.test_state, file)
 
     def learn(self, num_episodes: int, test_episode_times: int, train_link_weight_distribution,
@@ -367,13 +368,13 @@ class multi_agent_DQN(multi_agent_control.multi_agent):
                 print('''
                 **------------------------------------------------------------------------------------------**
                 **------------------------------------------------------------------------------------------**
-                {}th test: 
+                {}th test: seed is {}, 
                 now have been {}th episode, {}th training, current test 100_episodes_mean_total_score = {}; 
                 best test 100_episodes_mean_total_score = {}, the result of {}th episode, {}th training is best
                 **------------------------------------------------------------------------------------------**
                 **------------------------------------------------------------------------------------------**
                 '''.format(
-                    test_session, self.episode, train_session, self.cur_state,
+                    test_session, self.seed, self.episode, train_session, self.cur_state,
                     self.best_state['test_100_episodes_mean_total_score'], self.best_episode, self.best_train_session))
                 self.save()
                 # ------------------------------------------------------------------------------------------------

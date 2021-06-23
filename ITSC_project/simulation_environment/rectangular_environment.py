@@ -413,26 +413,31 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
 if __name__ == '__main__':
 
-    vehicle_num = 2
-    height = 20
-    width = 20
-    grid_height = 2
-    grid_width = 2
-    link_weight_distribution = 'UD'
-    env = generate_rectangle_network_action_destination_env(
-        height=height,
-        width=width,
-        low_second=30,
-        high_second=300,
-        grid_height=grid_height,
-        grid_width=grid_width,
-        action_interval=180,
-        left_reward_to_stop=0.01,
-        episode_duration=int(3600 * 5),
-        vehicle_num=vehicle_num,
-        seed=4000,
-        link_weight_distribution=link_weight_distribution,
-    )
+    for seed in [4000, 8000, 12000, 16000, 20000]:
+        vehicle_num = 2
+        height = 20
+        width = 20
+        grid_height = 2
+        grid_width = 2
+        link_weight_distribution = 'UD'
+        env = generate_rectangle_network_action_destination_env(
+            height=height,
+            width=width,
+            low_second=30,
+            high_second=300,
+            grid_height=grid_height,
+            grid_width=grid_width,
+            action_interval=180,
+            left_reward_to_stop=0.01,
+            episode_duration=int(3600 * 5),
+            vehicle_num=vehicle_num,
+            seed=seed,
+            link_weight_distribution=link_weight_distribution,
+        )
+        experienced_travel_time = env.experienced_travel_time
+        with open(project_path + '/experienced_travel_time_height{}_width{}_seed{}.pickle'.format(height, width, seed), 'wb') as file:
+            pickle.dump(experienced_travel_time, file)
+    exit()
 
     # with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
     #     env.experienced_travel_time = pickle.load(file)
