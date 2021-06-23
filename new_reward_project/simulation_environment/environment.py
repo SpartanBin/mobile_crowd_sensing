@@ -135,7 +135,7 @@ class generate_synchronous_timestep_environment_with_directional_action():
         reward = np.zeros_like(grid_cover, dtype=np.float32)
         reward[nn0_where] = - weight[nn0_where] * grid_cover[nn0_where] * np.log(
             1 - (1 - p[nn0_where]) ** grid_cover[nn0_where])
-        reward[n0_where] = (weight[n0_where] * np.log(p[n0_where])) / 10
+        reward[n0_where] = (weight[n0_where] * np.log(p[n0_where]))
         reward = reward.sum()
         self.got_reward += reward
         return reward
@@ -159,7 +159,16 @@ class generate_synchronous_timestep_environment_with_directional_action():
         self.grid['grid_cover'] = self.grid_cover_count()['node_cover'].values
         self.t_grid_cover_statistic()
         self.grid['p0'] = self.grid['p'].values
-        self.map_grid_info_to_node(add_col_name=['grid_cover', 'weight', 'p'])
+        self.map_grid_info_to_node(add_col_name=['weight', 'p'])
+
+        if len(set(loc)) == len(loc):
+            self.node.loc[loc, 'node_cover'] += 1
+        else:
+            for v_loc in loc:
+                self.node.loc[v_loc, 'node_cover'] += 1
+        self.grid['grid_cover'] = self.grid_cover_count()['node_cover'].values
+        self.map_grid_cover_to_node()
+
         self.vehicle_action_paths = [- 10000] * self.vehicle_num
 
         node_weight = self.node['weight'].values
@@ -284,15 +293,15 @@ class generate_synchronous_timestep_environment_with_directional_action():
             starting_node = self.vehicle_states[i, 0]
             ending_node = self.vehicle_states[i, 1]
             while remaining_time > 0:
+                self.node.loc[ending_node, 'node_cover'] += 1
                 starting_node = ending_node
                 ending_node = int(path[path_index])
                 remaining_time -= self.experienced_travel_time[starting_node, ending_node]
-                if remaining_time >= 0:
-                    self.node.loc[ending_node, 'node_cover'] += 1
                 path_index += 1
             self.vehicle_states[i, 2] = -remaining_time
             self.vehicle_states[i, 1] = ending_node
             if remaining_time == 0:
+                self.node.loc[ending_node, 'node_cover'] += 1
                 self.vehicle_states[i, 0] = self.vehicle_states[i, 1].copy()
             else:
                 self.vehicle_states[i, 0] = starting_node
