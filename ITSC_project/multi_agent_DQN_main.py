@@ -75,6 +75,8 @@ if __name__ == '__main__':
             vehicle_num=vehicle_num,
             seed=seed,
         )
+        with open(project_path + '/ITSC_project/simulation_environment/experienced_travel_time/experienced_travel_time_height{}_width{}_seed{}.pickle'.format(height, width, seed), 'rb') as file:
+            env.experienced_travel_time = pickle.load(file)
 
         model = multi_agent_DQN(
             env=env,

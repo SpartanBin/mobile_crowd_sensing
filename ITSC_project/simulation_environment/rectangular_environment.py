@@ -434,10 +434,8 @@ if __name__ == '__main__':
             seed=seed,
             link_weight_distribution=link_weight_distribution,
         )
-        experienced_travel_time = env.experienced_travel_time
-        with open(project_path + '/experienced_travel_time_height{}_width{}_seed{}.pickle'.format(height, width, seed), 'wb') as file:
-            pickle.dump(experienced_travel_time, file)
-    exit()
+        with open(project_path + '/ITSC_project/simulation_environment/experienced_travel_time/experienced_travel_time_height{}_width{}_seed{}.pickle'.format(height, width, seed), 'rb') as file:
+            env.experienced_travel_time = pickle.load(file)
 
     # with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
     #     env.experienced_travel_time = pickle.load(file)
