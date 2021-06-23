@@ -135,7 +135,7 @@ class generate_synchronous_timestep_environment_with_directional_action():
         reward = np.zeros_like(grid_cover, dtype=np.float32)
         reward[nn0_where] = - weight[nn0_where] * grid_cover[nn0_where] * np.log(
             1 - (1 - p[nn0_where]) ** grid_cover[nn0_where])
-        reward[n0_where] = weight[n0_where] * np.log(p[n0_where])
+        reward[n0_where] = (weight[n0_where] * np.log(p[n0_where])) / 10
         reward = reward.sum()
         self.got_reward += reward
         return reward

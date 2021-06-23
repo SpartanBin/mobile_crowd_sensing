@@ -34,7 +34,7 @@ if __name__ == '__main__':
     num_of_action_interval = 4
     num_of_cal_reward = 5
     BETA = 0.5
-    vehicle_num = 2
+    vehicle_num = 10
     env = generate_synchronous_timestep_environment_with_directional_action(
         experienced_travel_time=experienced_travel_time,
         node_id_to_grid_id=node_id_to_grid_id,
