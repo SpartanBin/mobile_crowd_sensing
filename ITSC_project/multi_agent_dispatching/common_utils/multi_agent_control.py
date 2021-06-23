@@ -17,6 +17,7 @@ class multi_agent():
         seed: Optional[int] = None,
         device: Union[torch.device, str] = "cpu",
     ):
+        self.seed = seed
         random.seed(seed)
         # Seed numpy RNG
         np.random.seed(seed)
