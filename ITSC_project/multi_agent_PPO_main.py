@@ -21,7 +21,7 @@ if __name__ == '__main__':
         action_interval = 180
         left_reward_to_stop = 0.01
         episode_duration = int(3600)
-        vehicle_num = 2
+        vehicle_num = 6
 
         train_link_weight_distribution = 'UD'
         test_link_weight_distribution = 'UD'
@@ -115,8 +115,13 @@ if __name__ == '__main__':
             seed=seed,
             device=device,
         )
+        if vehicle_num == 2:
+            train_episode = 40000
+        else:
+            train_episode = 8000 - 500 * (vehicle_num - 4) / 2
+        total_timesteps = int(train_episode * (episode_duration // action_interval))
         model.learn(
-            total_timesteps=1000000,
+            total_timesteps=total_timesteps,
             test_episode_times=100,
             train_link_weight_distribution=train_link_weight_distribution,
             test_link_weight_distribution=test_link_weight_distribution,
