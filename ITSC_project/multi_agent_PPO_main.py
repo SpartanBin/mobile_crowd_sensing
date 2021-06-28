@@ -12,8 +12,8 @@ if __name__ == '__main__':
 
     for seed in [4000, 8000, 12000, 16000, 20000]:
 
-        height = 20
-        width = 20
+        height = 30
+        width = 30
         low_second = 30
         high_second = 300
         grid_height = 2
@@ -21,7 +21,7 @@ if __name__ == '__main__':
         action_interval = 180
         left_reward_to_stop = 0.01
         episode_duration = int(3600)
-        vehicle_num = 6
+        vehicle_num = 2
 
         train_link_weight_distribution = 'UD'
         test_link_weight_distribution = 'UD'
@@ -115,11 +115,12 @@ if __name__ == '__main__':
             seed=seed,
             device=device,
         )
-        if vehicle_num == 2:
-            train_episode = 40000
-        else:
-            train_episode = 8000 - 500 * (vehicle_num - 4) / 2
-        total_timesteps = int(train_episode * (episode_duration // action_interval))
+        # if vehicle_num == 2:
+        #     train_episode = 40000
+        # else:
+        #     train_episode = 8000 - 500 * (vehicle_num - 4) / 2
+        # total_timesteps = int(train_episode * (episode_duration // action_interval))
+        total_timesteps = 1000000
         model.learn(
             total_timesteps=total_timesteps,
             test_episode_times=100,
