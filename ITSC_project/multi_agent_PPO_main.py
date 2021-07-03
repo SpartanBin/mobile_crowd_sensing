@@ -115,12 +115,29 @@ if __name__ == '__main__':
             seed=seed,
             device=device,
         )
+
+        # total_timesteps = 1000000
+
+        # # for 20 * 20
         # if vehicle_num == 2:
         #     train_episode = 40000
         # else:
         #     train_episode = 8000 - 500 * (vehicle_num - 4) / 2
-        # total_timesteps = int(train_episode * (episode_duration // action_interval))
-        total_timesteps = 1000000
+
+        # for 30 * 30
+        if vehicle_num == 2:
+            train_episode = 50000
+        elif vehicle_num == 4:
+            train_episode = 45000
+        elif vehicle_num == 6:
+            train_episode = 40000
+        elif vehicle_num == 8:
+            train_episode = 35000
+        else:
+            train_episode = 20000 - 2000 * (vehicle_num - 10) / 2
+
+        total_timesteps = int(train_episode * (episode_duration // action_interval))
+
         model.learn(
             total_timesteps=total_timesteps,
             test_episode_times=100,
