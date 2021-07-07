@@ -12,8 +12,8 @@ if __name__ == '__main__':
 
     for seed in [4000, 8000, 12000, 16000, 20000]:
 
-        height = 20
-        width = 20
+        height = 30
+        width = 30
         low_second = 30
         high_second = 300
         grid_height = 2
@@ -21,8 +21,8 @@ if __name__ == '__main__':
         action_interval = 180
         left_reward_to_stop = 0.01
         episode_duration = 3600
-        vehicle_num = 2
-        num_episodes = 100000
+        vehicle_num = 20
+        num_episodes = 40000
 
         train_link_weight_distribution = 'UD'
         test_link_weight_distribution = 'UD'
