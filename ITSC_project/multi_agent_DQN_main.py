@@ -21,7 +21,7 @@ if __name__ == '__main__':
         action_interval = 180
         left_reward_to_stop = 0.01
         episode_duration = 3600
-        vehicle_num = 20
+        vehicle_num = 10
         num_episodes = 20000
 
         train_link_weight_distribution = 'UD'
