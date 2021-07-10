@@ -413,13 +413,15 @@ class generate_rectangle_network_action_destination_env(generate_rectangle_netwo
 
 if __name__ == '__main__':
 
+    episode_total_scores = []
     for seed in [4000, 8000, 12000, 16000, 20000]:
-        vehicle_num = 2
-        height = 20
-        width = 20
+        vehicle_num = 20
+        height = 30
+        width = 30
         grid_height = 2
         grid_width = 2
         link_weight_distribution = 'UD'
+        torch.manual_seed(seed)
         env = generate_rectangle_network_action_destination_env(
             height=height,
             width=width,
@@ -429,57 +431,74 @@ if __name__ == '__main__':
             grid_width=grid_width,
             action_interval=180,
             left_reward_to_stop=0.01,
-            episode_duration=int(3600 * 5),
+            episode_duration=int(3600),
             vehicle_num=vehicle_num,
             seed=seed,
             link_weight_distribution=link_weight_distribution,
         )
         with open(project_path + '/ITSC_project/simulation_environment/experienced_travel_time/experienced_travel_time_height{}_width{}_seed{}.pickle'.format(height, width, seed), 'rb') as file:
             env.experienced_travel_time = pickle.load(file)
+        ac_probs_dict = {}
+        for i in range(vehicle_num):
+            ac_probs_dict[i] = torch.tensor([0.25] * 4)
+        for i in range(100):
+            done = False
+            while not done:
+                _, _, _, done, _ = env.step_by_action_probs(
+                    ac_probs_dict=ac_probs_dict,
+                    reward_type='greedy',
+                    cooperative_weight=0.5,
+                    negative_constant_reward=0,
+                    episode_time_cost=0,
+                )
+            episode_total_score = 1 - env.left_reward
+            episode_total_scores.append(episode_total_score)
+            env.reset(link_weight_distribution=link_weight_distribution)
+    print(np.mean(episode_total_scores))
 
-    # with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
-    #     env.experienced_travel_time = pickle.load(file)
-    # with open(project_path + '/experiment_results/bug_in_env_episode_duration_5h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
-    #         'rb') as file:
-    #     data = pickle.load(file)
-    # # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
-    # episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
-    # # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
-
-    env.reset(link_weight_distribution=link_weight_distribution)
-    ac_probs_dict = {}
-    for i in range(vehicle_num):
-        ac_probs_dict[i] = torch.tensor([0.25] * 4)
-    st = time.time()
-    episodes_total_scores = []
-    episodes_grid_scores = []
-    episodes_got_scores = []
-    all_timesteps_socre = []
-    for i in range(100):
-        done = False
-        # env.grid_weight = episodes_grid_scores_[i]
-        episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
-        timesteps_socre = []
-        while not done:
-            _, _, _, done, _ = env.step_by_action_probs(
-                ac_probs_dict=ac_probs_dict,
-                reward_type='greedy',
-                cooperative_weight=0.5,
-                negative_constant_reward=0,
-                episode_time_cost=0,
-            )
-            timesteps_socre.append(1 - env.left_reward)
-        all_timesteps_socre.append(timesteps_socre)
-        episode_total_score = 1 - env.left_reward
-        episodes_total_scores.append(episode_total_score)
-        episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
-        env.reset(link_weight_distribution=link_weight_distribution)
-    # print(np.mean(episodes_total_scores))
-    et = time.time()
-    print(et - st)
-
-    # mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
-    # print(list(mean_ts_score))
-
-    # with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
-    #     pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)
+    # # with open(project_path + '/experienced_travel_time_{}_{}.pickle'.format(height, width), 'rb') as file:
+    # #     env.experienced_travel_time = pickle.load(file)
+    # # with open(project_path + '/experiment_results/bug_in_env_episode_duration_5h/PPO_state_vehicle{}_env_20_20.pickle'.format(vehicle_num),
+    # #         'rb') as file:
+    # #     data = pickle.load(file)
+    # # # episodes_got_scores_ = np.array(data[data['best_state']['test_session']]['episodes_got_scores'])
+    # # episodes_grid_scores_ = np.array(data[data['best_state']['test_session']]['episodes_grid_scores'])
+    # # # episodes_grid_scores_ = episodes_grid_scores_ + episodes_got_scores_
+    #
+    # env.reset(link_weight_distribution=link_weight_distribution)
+    # ac_probs_dict = {}
+    # for i in range(vehicle_num):
+    #     ac_probs_dict[i] = torch.tensor([0.25] * 4)
+    # st = time.time()
+    # episodes_total_scores = []
+    # episodes_grid_scores = []
+    # episodes_got_scores = []
+    # all_timesteps_socre = []
+    # for i in range(100):
+    #     done = False
+    #     # env.grid_weight = episodes_grid_scores_[i]
+    #     episodes_grid_scores += [copy.deepcopy(env.grid_weight)]
+    #     timesteps_socre = []
+    #     while not done:
+    #         _, _, _, done, _ = env.step_by_action_probs(
+    #             ac_probs_dict=ac_probs_dict,
+    #             reward_type='greedy',
+    #             cooperative_weight=0.5,
+    #             negative_constant_reward=0,
+    #             episode_time_cost=0,
+    #         )
+    #         timesteps_socre.append(1 - env.left_reward)
+    #     all_timesteps_socre.append(timesteps_socre)
+    #     episode_total_score = 1 - env.left_reward
+    #     episodes_total_scores.append(episode_total_score)
+    #     episodes_got_scores += [copy.deepcopy(env.episode_got_scores)]
+    #     env.reset(link_weight_distribution=link_weight_distribution)
+    # # print(np.mean(episodes_total_scores))
+    # et = time.time()
+    # print(et - st)
+    #
+    # # mean_ts_score = np.mean(np.array(all_timesteps_socre), axis=0)
+    # # print(list(mean_ts_score))
+    #
+    # # with open(project_path + '/random_policy_grid_score.pickle', 'wb') as file:
+    # #     pickle.dump({'episodes_got_scores': episodes_got_scores, 'episodes_grid_scores': episodes_grid_scores}, file)
