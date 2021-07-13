@@ -379,7 +379,7 @@ class multi_agent_DQN(multi_agent_control.multi_agent):
                 self.save()
                 # ------------------------------------------------------------------------------------------------
 
-            if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 1.1:
+            if self.last_100_episodes_mean_total_score <= self.the_best_last_100_episodes_mean_total_score / 2:
                 break
 
         self.save()
