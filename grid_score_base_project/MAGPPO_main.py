@@ -56,7 +56,7 @@ if __name__ == '__main__':
     in_channels = 5
     learning_rate = 3e-4
     n_steps = 2048
-    batch_size = int(2048 * 1.4)  # 1.4
+    batch_size = int(2048 * 1)  # 1.4
     n_epochs = 10
     gamma = 0.99  # In OpenAI Five, when set this to 0.99, policy performs best
     gae_lambda = 0.95
