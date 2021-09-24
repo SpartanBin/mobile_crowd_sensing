@@ -1112,11 +1112,11 @@ First reward type: PPO doesn't work as well as the random policy.
 
 Second reward type: PPO works better than random policy. 
 
-![grid_score](./results_visualization/trainGD_testGD/grid_score.png)
+![grid_score](./results_visualization/ITSC/trainGD_testGD/grid_score.png)
 
-![got_score_PPO_4_episode_duration_4h](./results_visualization/trainGD_testGD/got_score_PPO_4_episode_duration_4h.png)
+![got_score_PPO_4_episode_duration_4h](./results_visualization/ITSC/trainGD_testGD/got_score_PPO_4_episode_duration_4h.png)
 
-![got_score_R_4_episode_duration_4h](./results_visualization/trainGD_testGD/got_score_R_4_episode_duration_4h.png)
+![got_score_R_4_episode_duration_4h](./results_visualization/ITSC/trainGD_testGD/got_score_R_4_episode_duration_4h.png)
 
 - The first chart shows the spatial distribution of the target grid score, the second chart shows the spatial distribution of the PPO got score, and the third chart shows that of the random policy. 
 - The calculation is done by taking the average of the 100 episode scores. 
