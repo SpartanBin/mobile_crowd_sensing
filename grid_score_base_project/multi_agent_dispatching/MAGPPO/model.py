@@ -95,9 +95,9 @@ class GCN_GA_Extractor(nn.Module):
 
         #### actor ####
 
-        embedding_x = F.elu(self.bn1_a(self.graph_embedding_layer1_a(self.bn0_a(x), edge_index, edge_weight)))
-        embedding_x = F.elu(self.bn2_a(self.graph_embedding_layer2_a(embedding_x, edge_index, edge_weight)))
-        embedding_x = F.elu(self.bn3_a(self.graph_embedding_layer3_a(embedding_x, edge_index, edge_weight)))
+        embedding_x = F.elu(self.bn1_a(self.graph_embedding_layer1_a(self.bn0_a(x), edge_index)))
+        embedding_x = F.elu(self.bn2_a(self.graph_embedding_layer2_a(embedding_x, edge_index)))
+        embedding_x = F.elu(self.bn3_a(self.graph_embedding_layer3_a(embedding_x, edge_index)))
         a_output = self.pooling_layer_a(embedding_x, batch)
         a_output = F.elu(self.dnn_bn_a(self.dnn1_a(a_output)))
         a_output = self.dnn2_a(a_output)
@@ -106,9 +106,9 @@ class GCN_GA_Extractor(nn.Module):
 
         #### critic ####
 
-        embedding_x = F.elu(self.bn1_c(self.graph_embedding_layer1_c(self.bn0_c(x), edge_index, edge_weight)))
-        embedding_x = F.elu(self.bn2_c(self.graph_embedding_layer2_c(embedding_x, edge_index, edge_weight)))
-        embedding_x = F.elu(self.bn3_c(self.graph_embedding_layer3_c(embedding_x, edge_index, edge_weight)))
+        embedding_x = F.elu(self.bn1_c(self.graph_embedding_layer1_c(self.bn0_c(x), edge_index)))
+        embedding_x = F.elu(self.bn2_c(self.graph_embedding_layer2_c(embedding_x, edge_index)))
+        embedding_x = F.elu(self.bn3_c(self.graph_embedding_layer3_c(embedding_x, edge_index)))
         c_output = self.pooling_layer_c(embedding_x, batch)
         c_output = F.elu(self.dnn_bn_c(self.dnn1_c(c_output)))
         c_output = self.dnn2_c(c_output)

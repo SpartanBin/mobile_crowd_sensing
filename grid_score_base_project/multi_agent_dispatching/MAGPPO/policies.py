@@ -94,7 +94,7 @@ class ActorCriticPolicy(nn.Module):
 
         self.ortho_init = ortho_init
 
-        self.extractor = SAGE_GA_Extractor(in_channels=in_channels)
+        self.extractor = GCN_GA_Extractor(in_channels=in_channels)
         self.value_net = nn.Linear(32, 1)
         # Action distribution
         self.action_distribution = CategoricalDistribution(action_dim=action_dim)
