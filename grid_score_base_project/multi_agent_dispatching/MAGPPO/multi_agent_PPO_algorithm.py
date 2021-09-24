@@ -392,7 +392,7 @@ class multi_agent_PPO():
             self.random_policy_100_episodes_mean_got_reward
         self.best_state['the_best_100_episodes_mean_got_reward'] = np.mean(self.the_best_100_episodes_got_rewards)
         self.test_state['best_state'] = self.best_state
-        with open('PPO_state_vehicle{}_ed_{}_SAGE_GA_Extractor.pickle'.format(
+        with open('PPO_state_vehicle{}_ed_{}_GCN_GA_Extractor.pickle'.format(
                 self.vehicle_num, self.env.episode_duration,
         ), 'wb') as file:
             pickle.dump(self.test_state, file)
