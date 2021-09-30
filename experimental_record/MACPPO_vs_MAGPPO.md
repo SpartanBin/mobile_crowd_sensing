@@ -94,9 +94,9 @@ Environment 2 (two vehicles): random policy 1.810.
 
 | model type | best train session | best performance | final performance | remark |
 | ---------- | ------------------ | ---------------- | ----------------- | ------ |
-| model 1    |                    |                  |                   |        |
-| model 2    |                    |                  |                   |        |
-| model 3    |                    |                  |                   |        |
+| model 1    | 1894               | 3.121            | 3.115             |        |
+| model 2    | 1920               | 3.162            | 3.138             |        |
+| model 3    | 1925               | 3.212            | 3.189             |        |
 | model 4    | 1905               | 2.891            | 2.887             |        |
 
 
@@ -156,4 +156,4 @@ Environment 2 (two vehicles): random policy 1.810. Use PPO.
 
 ## TODO
 
-- [ ] 
+- [ ] Try MAGPPO model with structure GraphSAGE + Global Attention and feature engineering representing vehicles' direction.
